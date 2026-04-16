@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/app.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/app.py"
+    },
+    {
+      "src": "/css/(.*)",
+      "dest": "backend/app.py"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "backend/app.py"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "backend/app.py"
+    },
+    {
+      "src": "/forgot-password",
+      "dest": "backend/app.py"
+    },
+    {
+      "src": "/",
+      "dest": "backend/app.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "backend/app.py"
+    }
+  ]
+}

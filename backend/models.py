@@ -12,7 +12,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
-    role = db.Column(db.String(20), default='user')  # admin, user
+    role = db.Column(db.String(20), default='user')
     is_active = db.Column(db.Boolean, default=True)
     machine_id = db.Column(db.String(255), nullable=True)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -44,7 +44,7 @@ class LoginHistory(db.Model):
     ip_address = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.String(500), nullable=True)
     machine_id = db.Column(db.String(255), nullable=True)
-    status = db.Column(db.String(20), default='success')  # success, failed
+    status = db.Column(db.String(20), default='success')
 
     user = db.relationship('User', backref=db.backref('login_history', lazy=True))
 
@@ -55,7 +55,7 @@ class ProductCache(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     make = db.Column(db.String(100), nullable=False)
-    product_data = db.Column(db.Text, nullable=False)  # JSON string
+    product_data = db.Column(db.Text, nullable=False)
     cached_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_deleted = db.Column(db.Boolean, default=False)
 

@@ -5,4 +5,8 @@ db = SQLAlchemy()
 def init_db(app):
     db.init_app(app)
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+            print("Database tables created/verified")
+        except Exception as e:
+            print(f"Database creation error: {e}")
