@@ -1,0 +1,467 @@
+/* ===================== LOGIN PAGE ===================== */
+
+.auth-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  background: var(--slate-50);
+  overflow: hidden;
+}
+
+/* ===================== SIDEBAR ===================== */
+
+.auth-sidebar {
+  width: 460px;
+  background: linear-gradient(160deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 44px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.auth-sidebar::before {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(
+    circle,
+    rgba(51, 129, 255, 0.1) 0%,
+    transparent 70%
+  );
+  top: -150px;
+  right: -100px;
+  pointer-events: none;
+}
+
+.auth-sidebar::after {
+  content: "";
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(
+    circle,
+    rgba(16, 185, 129, 0.07) 0%,
+    transparent 70%
+  );
+  bottom: -80px;
+  left: -80px;
+  pointer-events: none;
+}
+
+.sidebar-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Company Logo Area */
+.company-logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
+  padding: 28px 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.company-logo-img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  filter: brightness(1.1) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.3));
+  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  transition: transform 0.3s var(--ease-out);
+}
+
+.company-logo-img:hover {
+  transform: scale(1.04);
+}
+
+.company-logo-fallback {
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.company-logo-fallback svg {
+  width: 48px;
+  height: 48px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.company-logo-name {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.02em;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.company-logo-tagline {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* Sidebar Text */
+.sidebar-heading {
+  color: white;
+  font-size: 1.625rem;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+  margin-bottom: 12px;
+}
+
+.sidebar-subtext {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  margin-bottom: 36px;
+}
+
+.sidebar-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.sidebar-feature .feature-icon {
+  width: 38px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-feature .feature-icon svg {
+  width: 17px;
+  height: 17px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sidebar-feature .feature-text h4 {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 1px;
+}
+
+.sidebar-feature .feature-text p {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-footer p {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ===================== MAIN AUTH PANEL ===================== */
+
+.auth-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Mobile Logo (shown only on mobile) */
+.mobile-logo {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.mobile-logo-img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  margin-bottom: 10px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.12));
+}
+
+.mobile-logo-fallback {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.mobile-logo-fallback svg {
+  width: 36px;
+  height: 36px;
+  color: white;
+}
+
+.mobile-logo-name {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.mobile-logo-tagline {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.auth-card-header {
+  margin-bottom: 28px;
+}
+
+.auth-card-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+
+.auth-card-header p {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+/* Tabs */
+.auth-tabs {
+  display: flex;
+  background: var(--slate-100);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  margin-bottom: 24px;
+}
+
+.auth-tab-btn {
+  flex: 1;
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-base);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-tab-btn.active {
+  background: var(--white);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.auth-tab-btn:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+/* Panels */
+.auth-panel {
+  display: none;
+}
+.auth-panel.active {
+  display: block;
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.form-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  gap: 12px;
+}
+
+.forgot-link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary-600);
+  white-space: nowrap;
+}
+
+.forgot-link:hover {
+  color: var(--primary-700);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.auth-divider span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.auth-switch a {
+  font-weight: 600;
+  color: var(--primary-600);
+  margin-left: 4px;
+}
+
+.auth-switch a:hover {
+  color: var(--primary-700);
+  text-decoration: underline;
+}
+
+/* Password Strength */
+.password-meter {
+  margin-top: 8px;
+}
+.meter-bar {
+  height: 3px;
+  background: var(--slate-150);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+.meter-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition:
+    width 0.4s var(--ease-out),
+    background 0.3s;
+  width: 0;
+}
+.meter-fill.weak {
+  width: 25%;
+  background: var(--rose-500);
+}
+.meter-fill.fair {
+  width: 50%;
+  background: var(--amber-500);
+}
+.meter-fill.good {
+  width: 75%;
+  background: var(--sky-500);
+}
+.meter-fill.strong {
+  width: 100%;
+  background: var(--emerald-500);
+}
+.meter-text {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+/* ===================== RESPONSIVE ===================== */
+
+@media (max-width: 1024px) {
+  .auth-sidebar {
+    display: none;
+  }
+  .auth-main {
+    padding: 32px 20px;
+  }
+  .mobile-logo {
+    display: flex;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-main {
+    padding: 24px 16px;
+    align-items: flex-start;
+    padding-top: 32px;
+  }
+  .auth-card-header h1 {
+    font-size: 1.375rem;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .form-actions-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .auth-tabs {
+    margin-bottom: 20px;
+  }
+  .btn-xl {
+    padding: 14px 24px;
+  }
+}

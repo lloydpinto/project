@@ -1,0 +1,825 @@
+{
+  "Sheet1": [
+    {
+      "Sl.No": 1,
+      "Make": "Edwards",
+      "Model": "SIGA-OSHD+ SIGA-SB",
+      "Description": "Multisensor detector",
+      "Quantity": 1,
+      "Net Price": 2000
+    },
+    {
+      "Sl.No": null,
+      "Make": "Edwards",
+      "Model": "ds-3i",
+      "Description": "Smoke detector",
+      "Quantity": 1,
+      "Net Price": 2001
+    },
+    {
+      "Sl.No": 2,
+      "Make": "Edwards",
+      "Model": "SIGA-OSD+ SIGA-SB",
+      "Description": "Smoke detector",
+      "Quantity": 1,
+      "Net Price": 2002
+    },
+    {
+      "Sl.No": 3,
+      "Make": "Edwards",
+      "Model": "SIGA-HRD+ SIGA-SB",
+      "Description": "Heat detector",
+      "Quantity": 1,
+      "Net Price": 2003
+    },
+    {
+      "Sl.No": null,
+      "Make": "Edwards",
+      "Model": "SIGA-HRD-FCN+ SIGA-SB",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2004
+    },
+    {
+      "Sl.No": 4,
+      "Make": "Edwards",
+      "Model": "SIGA-270",
+      "Description": "Manual Call Point",
+      "Quantity": 1,
+      "Net Price": 2005
+    },
+    {
+      "Sl.No": 5,
+      "Make": "Edwards",
+      "Model": "SIGA-278",
+      "Description": "Manual Call Point-Dual Action",
+      "Quantity": 1,
+      "Net Price": 2006
+    },
+    {
+      "Sl.No": 6,
+      "Make": "Edwards",
+      "Model": "G1-ARF",
+      "Description": "Hooter",
+      "Quantity": 1,
+      "Net Price": 2007
+    },
+    {
+      "Sl.No": 7,
+      "Make": "Edwards",
+      "Model": "G1-AVRF",
+      "Description": "Hooter with strobe",
+      "Quantity": 1,
+      "Net Price": 2008
+    },
+    {
+      "Sl.No": 8,
+      "Make": "Edwards",
+      "Model": "SIGA-CT1",
+      "Description": "Monitor Module",
+      "Quantity": 1,
+      "Net Price": 2009
+    },
+    {
+      "Sl.No": 9,
+      "Make": "Edwards",
+      "Model": "SIGA-CR Control Relay Module",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2010
+    },
+    {
+      "Sl.No": 10,
+      "Make": "Edwards",
+      "Model": "SIGA-CC1 Control Module",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2011
+    },
+    {
+      "Sl.No": 11,
+      "Make": "Edwards",
+      "Model": "SIGA-IM2 Fault Isolator Module",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2012
+    },
+    {
+      "Sl.No": 12,
+      "Make": "Edwards",
+      "Model": "3LCDANN+RLCMB/S repeater panel",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2013
+    },
+    {
+      "Sl.No": 13,
+      "Make": "Edwards",
+      "Model": "EC50R beam detector",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2014
+    },
+    {
+      "Sl.No": 14,
+      "Make": "Edwards",
+      "Model": "6833-4 telephone jack",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2015
+    },
+    {
+      "Sl.No": null,
+      "Make": "Edwards",
+      "Model": "6700-0071 telephone receiver",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2016
+    },
+    {
+      "Sl.No": 15,
+      "Make": "Edwards",
+      "Model": "SIGA-SD Duct detector",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2017
+    },
+    {
+      "Sl.No": 16,
+      "Make": "Edwards",
+      "Model": "4PPS primary power supply",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2018
+    },
+    {
+      "Sl.No": 17,
+      "Make": "Edwards",
+      "Model": "3-cpu3",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2019
+    },
+    {
+      "Sl.No": 18,
+      "Make": "Edwards",
+      "Model": "3-LCD display module",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2020
+    },
+    {
+      "Sl.No": 19,
+      "Make": "Edwards",
+      "Model": "3X-NET network adapter card",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2021
+    },
+    {
+      "Sl.No": 20,
+      "Make": "Edwards",
+      "Model": "SIGA-OSD-FCN+SIGA-SB smoke detector",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2022
+    },
+    {
+      "Sl.No": 21,
+      "Make": "Edwards",
+      "Model": "SIGA-LED response indicator",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2023
+    },
+    {
+      "Sl.No": 22,
+      "Make": "Edwards",
+      "Model": "3SDDC1 controller module dual loop card",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2024
+    },
+    {
+      "Sl.No": 23,
+      "Make": "Edwards",
+      "Model": "3SSDC1 controller module single loop card",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2025
+    },
+    {
+      "Sl.No": 24,
+      "Make": "Edwards",
+      "Model": "3RLCM/D Annunciator cabinet door",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2026
+    },
+    {
+      "Sl.No": 25,
+      "Make": "Edwards",
+      "Model": "SIGA-SB base",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2027
+    },
+    {
+      "Sl.No": null,
+      "Make": "Edwards",
+      "Model": "3-FTCU",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2028
+    },
+    {
+      "Sl.No": 26,
+      "Make": "Edwards",
+      "Model": "3-LCDXL-1 Main lcd display module",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2029
+    },
+    {
+      "Sl.No": 27,
+      "Make": "Edwards",
+      "Model": "3ZA95 zoned audio amplifier",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2030
+    },
+    {
+      "Sl.No": 28,
+      "Make": "Edwards",
+      "Model": "3ZA40 zoned audio amplifier 40W",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2031
+    },
+    {
+      "Sl.No": 29,
+      "Make": "Edwards",
+      "Model": "G4HFWN-S7 wall speaker",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2032
+    },
+    {
+      "Sl.No": 30,
+      "Make": "Edwards",
+      "Model": "FWCGSUL incident management and annunciation",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2033
+    },
+    {
+      "Sl.No": 31,
+      "Make": "Edwards",
+      "Model": "APS-10 power supply",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2034
+    },
+    {
+      "Sl.No": 32,
+      "Make": "Edwards",
+      "Model": "I0-1000R2 single loop panel",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2035
+    },
+    {
+      "Sl.No": 33,
+      "Make": "Edwards",
+      "Model": "I0-64 single loop panel",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2036
+    },
+    {
+      "Sl.No": 34,
+      "Make": "Edwards",
+      "Model": "EST-3X Single loop panel",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2037
+    },
+    {
+      "Sl.No": 35,
+      "Make": "Edwards",
+      "Model": "dual loop card for EST-3X & EST-3",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2038
+    },
+    {
+      "Sl.No": 36,
+      "Make": "Edwards",
+      "Model": "single loop card for EST-3X & EST-3",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2039
+    },
+    {
+      "Sl.No": 37,
+      "Make": "Edwards",
+      "Model": "power supply for hooter cum strobe",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2040
+    },
+    {
+      "Sl.No": 38,
+      "Make": "Edwards",
+      "Model": "3-CAB14B",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2041
+    },
+    {
+      "Sl.No": 39,
+      "Make": "Edwards",
+      "Model": "3-CAB14D",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2042
+    },
+    {
+      "Sl.No": 40,
+      "Make": "Edwards",
+      "Model": "3-CAB21B",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2043
+    },
+    {
+      "Sl.No": 41,
+      "Make": "Edwards",
+      "Model": "3-CAB21D",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2044
+    },
+    {
+      "Sl.No": 42,
+      "Make": "Edwards",
+      "Model": "3-CAB7B",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2045
+    },
+    {
+      "Sl.No": 43,
+      "Make": "Edwards",
+      "Model": "3-CAB7D",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2046
+    },
+    {
+      "Sl.No": 44,
+      "Make": "Edwards",
+      "Model": "G4-AVRF HOOTER",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2047
+    },
+    {
+      "Sl.No": 45,
+      "Make": "Edwards",
+      "Model": "G4HFWN-S7 2W wall speaker",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2048
+    },
+    {
+      "Sl.No": 46,
+      "Make": "Edwards",
+      "Model": "GCHFWN-S7 2W ceiling speaker",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2049
+    },
+    {
+      "Sl.No": 47,
+      "Make": "Edwards",
+      "Model": "G1-ARF+HDVM",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2050
+    },
+    {
+      "Sl.No": 48,
+      "Make": "Edwards",
+      "Model": "SIGA-PS",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2051
+    },
+    {
+      "Sl.No": 49,
+      "Make": "Edwards",
+      "Model": "DH-2I",
+      "Description": null,
+      "Quantity": 1,
+      "Net Price": 2052
+    },
+
+    {
+      "Sl.No": 50,
+      "Make": "Bosch",
+      "Model": "PRA-SCS",
+      "Description": "System controller, small",
+      "Quantity": 1,
+      "Net Price": 157530.1
+    },
+    {
+      "Sl.No": 51,
+      "Make": "Bosch",
+      "Model": "PVA-4CR12",
+      "Description": "Controller",
+      "Quantity": 1,
+      "Net Price": 169991.64
+    },
+    {
+      "Sl.No": 52,
+      "Make": "Bosch",
+      "Model": "PVA-4R24",
+      "Description": "Router",
+      "Quantity": 1,
+      "Net Price": 145852.2
+    },
+    {
+      "Sl.No": 53,
+      "Make": "Bosch",
+      "Model": "PRA-PSM24",
+      "Description": "Power supply module 24V",
+      "Quantity": 1,
+      "Net Price": 16698.24
+    },
+    {
+      "Sl.No": 54,
+      "Make": "Bosch",
+      "Model": "PRA-IM16C8",
+      "Description": "Control interface module, 16x8",
+      "Quantity": 1,
+      "Net Price": 60009.95
+    },
+    {
+      "Sl.No": 55,
+      "Make": "Bosch",
+      "Model": "PVA-15CST",
+      "Description": "Call station",
+      "Quantity": 1,
+      "Net Price": 60353.28
+    },
+    {
+      "Sl.No": 56,
+      "Make": "Bosch",
+      "Model": "PVA-20CSE",
+      "Description": "Call station extension",
+      "Quantity": 1,
+      "Net Price": 36213.84
+    },
+    {
+      "Sl.No": 57,
+      "Make": "Bosch",
+      "Model": "PRA-CSLD",
+      "Description": "Desktop LCD call station",
+      "Quantity": 1,
+      "Net Price": 96514.6
+    },
+    {
+      "Sl.No": 58,
+      "Make": "Bosch",
+      "Model": "PRA-CSE",
+      "Description": "Call station extension",
+      "Quantity": 1,
+      "Net Price": 35094.15
+    },
+    {
+      "Sl.No": 59,
+      "Make": "Bosch",
+      "Model": "PVA-2P500",
+      "Description": "Power amplifier, 2x500W",
+      "Quantity": 1,
+      "Net Price": 156435.95
+    },
+    {
+      "Sl.No": 60,
+      "Make": "Bosch",
+      "Model": "LC3-UM06-IN",
+      "Description": "Ceiling speaker, 6W, metal",
+      "Quantity": 1,
+      "Net Price": 531.38
+    },
+    {
+      "Sl.No": 61,
+      "Make": "Bosch",
+      "Model": "LBD3902-D",
+      "Description": "Cabinet loudspeaker 6W, black",
+      "Quantity": 1,
+      "Net Price": 938.17
+    },
+    {
+      "Sl.No": 62,
+      "Make": "Bosch",
+      "Model": "LBD3903-D",
+      "Description": "Cabinet loudspeaker 12W, black",
+      "Quantity": 1,
+      "Net Price": 1398.47
+    },
+
+    {
+      "Sl.No": 1001,
+      "Make": "Honeywell",
+      "Model": "HSD-01",
+      "Description": "Photoelectric Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 2100
+    },
+    {
+      "Sl.No": 1002,
+      "Make": "Honeywell",
+      "Model": "HHD-02",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 2150
+    },
+    {
+      "Sl.No": 1003,
+      "Make": "Honeywell",
+      "Model": "HCP-03",
+      "Description": "Manual Call Point",
+      "Quantity": 1,
+      "Net Price": 1800
+    },
+    {
+      "Sl.No": 1004,
+      "Make": "Honeywell",
+      "Model": "HCM-04",
+      "Description": "Control Module",
+      "Quantity": 1,
+      "Net Price": 3200
+    },
+    {
+      "Sl.No": 1005,
+      "Make": "Honeywell",
+      "Model": "HMM-05",
+      "Description": "Monitor Module",
+      "Quantity": 1,
+      "Net Price": 3100
+    },
+
+    {
+      "Sl.No": 1010,
+      "Make": "Siemens",
+      "Model": "SSD-10",
+      "Description": "Optical Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 2500
+    },
+    {
+      "Sl.No": 1011,
+      "Make": "Siemens",
+      "Model": "SHD-11",
+      "Description": "Thermal Heat Detector",
+      "Quantity": 1,
+      "Net Price": 2550
+    },
+    {
+      "Sl.No": 1012,
+      "Make": "Siemens",
+      "Model": "SCP-12",
+      "Description": "Break Glass Unit",
+      "Quantity": 1,
+      "Net Price": 1900
+    },
+    {
+      "Sl.No": 1013,
+      "Make": "Siemens",
+      "Model": "SCM-13",
+      "Description": "Relay Control Module",
+      "Quantity": 1,
+      "Net Price": 3400
+    },
+
+    {
+      "Sl.No": 1020,
+      "Make": "Notifier",
+      "Model": "NSD-20",
+      "Description": "Addressable Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 2700
+    },
+    {
+      "Sl.No": 1021,
+      "Make": "Notifier",
+      "Model": "NHD-21",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 2600
+    },
+    {
+      "Sl.No": 1022,
+      "Make": "Notifier",
+      "Model": "NCP-22",
+      "Description": "Manual Call Point",
+      "Quantity": 1,
+      "Net Price": 2000
+    },
+    {
+      "Sl.No": 1023,
+      "Make": "Notifier",
+      "Model": "NMM-23",
+      "Description": "Monitor Module",
+      "Quantity": 1,
+      "Net Price": 3500
+    },
+
+    {
+      "Sl.No": 1030,
+      "Make": "Hochiki",
+      "Model": "HSD-30",
+      "Description": "Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 2300
+    },
+    {
+      "Sl.No": 1031,
+      "Make": "Hochiki",
+      "Model": "HHD-31",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 2350
+    },
+    {
+      "Sl.No": 1032,
+      "Make": "Hochiki",
+      "Model": "HCP-32",
+      "Description": "Manual Call Point",
+      "Quantity": 1,
+      "Net Price": 1950
+    },
+
+    {
+      "Sl.No": 1040,
+      "Make": "Morley",
+      "Model": "MSD-40",
+      "Description": "Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 2200
+    },
+    {
+      "Sl.No": 1041,
+      "Make": "Morley",
+      "Model": "MHD-41",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 2250
+    },
+    {
+      "Sl.No": 1042,
+      "Make": "Morley",
+      "Model": "MCP-42",
+      "Description": "Manual Call Point",
+      "Quantity": 1,
+      "Net Price": 1850
+    },
+
+    {
+      "Sl.No": 1050,
+      "Make": "Ravel",
+      "Model": "RSD-50",
+      "Description": "Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 1500
+    },
+    {
+      "Sl.No": 1051,
+      "Make": "Ravel",
+      "Model": "RHD-51",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 1550
+    },
+    {
+      "Sl.No": 1052,
+      "Make": "Ravel",
+      "Model": "RCP-52",
+      "Description": "Manual Call Point",
+      "Quantity": 1,
+      "Net Price": 1300
+    },
+
+    {
+      "Sl.No": 1060,
+      "Make": "Agni",
+      "Model": "ASD-60",
+      "Description": "Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 1400
+    },
+    {
+      "Sl.No": 1061,
+      "Make": "Agni",
+      "Model": "AHD-61",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 1450
+    },
+    {
+      "Sl.No": 1062,
+      "Make": "Agni",
+      "Model": "ACP-62",
+      "Description": "Manual Call Point",
+      "Quantity": 1,
+      "Net Price": 1200
+    },
+
+    {
+      "Sl.No": 1070,
+      "Make": "Schneider",
+      "Model": "SSD-70",
+      "Description": "Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 2600
+    },
+    {
+      "Sl.No": 1071,
+      "Make": "Schneider",
+      "Model": "SHD-71",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 2650
+    },
+
+    {
+      "Sl.No": 1080,
+      "Make": "Panasonic",
+      "Model": "PSD-80",
+      "Description": "Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 2100
+    },
+    {
+      "Sl.No": 1081,
+      "Make": "Panasonic",
+      "Model": "PHD-81",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 2150
+    },
+
+    {
+      "Sl.No": 1090,
+      "Make": "Philips",
+      "Model": "LSP-90",
+      "Description": "Ceiling Speaker 6W",
+      "Quantity": 1,
+      "Net Price": 800
+    },
+    {
+      "Sl.No": 1091,
+      "Make": "Philips",
+      "Model": "LSP-91",
+      "Description": "Wall Speaker 10W",
+      "Quantity": 1,
+      "Net Price": 1200
+    },
+
+    {
+      "Sl.No": 1100,
+      "Make": "Zeta",
+      "Model": "ZSD-100",
+      "Description": "Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 1700
+    },
+    {
+      "Sl.No": 1101,
+      "Make": "Zeta",
+      "Model": "ZHD-101",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 1750
+    },
+
+    {
+      "Sl.No": 1110,
+      "Make": "Eaton",
+      "Model": "ESD-110",
+      "Description": "Smoke Detector",
+      "Quantity": 1,
+      "Net Price": 2400
+    },
+    {
+      "Sl.No": 1111,
+      "Make": "Eaton",
+      "Model": "EHD-111",
+      "Description": "Heat Detector",
+      "Quantity": 1,
+      "Net Price": 2450
+    }
+  ]
+}
