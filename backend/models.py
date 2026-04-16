@@ -55,7 +55,7 @@ class ProductCache(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     make = db.Column(db.String(100), nullable=False)
-    product_data = db.Column(db.Text, nullable=False)
+    product_data = db.Column(db.Text, nullable=False, default='{}')
     cached_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_deleted = db.Column(db.Boolean, default=False)
 
