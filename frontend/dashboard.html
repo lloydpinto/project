@@ -6,6 +6,50 @@
     <title>Authorized Partners</title>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        /* ── Nav Logo ── */
+        .nav-logo-img {
+            height: 30px;
+            width: auto;
+            max-width: 120px;
+            object-fit: contain;
+            display: block;
+            filter: none;
+            border-radius: 4px;
+            transition: opacity 0.2s ease;
+        }
+
+        .nav-logo-img:hover { opacity: 0.85; }
+
+        /* Hide text brand name when logo loads */
+        .nav-logo-img.loaded ~ .brand-name { display: none; }
+
+        .nav-brand-inner {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        /* Fallback mark — shown if image fails */
+        .brand-mark-fallback {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%);
+            border-radius: 7px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .brand-mark-fallback svg {
+            width: 15px;
+            height: 15px;
+            color: white;
+        }
+
+        .brand-mark-fallback.show { display: flex; }
+    </style>
 </head>
 <body>
     <div id="toastContainer" class="toast-container"></div>
@@ -15,35 +59,74 @@
     </div>
 
     <div class="app-layout">
-        <!-- TOP NAV -->
+
+        <!-- ══════════ TOP NAV ══════════ -->
         <nav class="top-nav">
             <div class="nav-left">
                 <a href="/dashboard" class="nav-brand">
-                    <div class="brand-mark">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <div class="nav-brand-inner">
+
+                        <!-- ★ NAVBAR LOGO — Change src to your logo URL ★ -->
+                        <img
+                            id="navLogo"
+                            src="./images/Future Connect Logo.png"
+                            alt="Company Logo"
+                            class="nav-logo-img"
+                            onerror="
+                                this.style.display='none';
+                                document.getElementById('navLogoFallback').classList.add('show');
+                            "
+                            onload="this.classList.add('loaded')"
+                        >
+
+                        <!-- Fallback icon (shows if logo URL fails) -->
+                        <div id="navLogoFallback" class="brand-mark-fallback">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+
+                        <!-- ★ Change company name below ★ -->
+                        <span class="brand-name" id="navBrandName">Future Connect</span>
                     </div>
-                    <span class="brand-name">Authorized Partners</span>
                 </a>
             </div>
 
+            <!-- Search -->
             <div class="nav-center">
                 <div class="nav-search-box">
                     <span class="search-prefix">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
                     </span>
                     <input type="text" id="globalSearch"
                            placeholder="Search model, description, make..."
                            oninput="onSearchInput(this.value)"
                            onkeydown="if(event.key==='Enter') performSearch(this.value)">
-                    <button class="search-clear-btn" id="searchClearBtn" onclick="clearSearch()" title="Clear search">✕</button>
+                    <button class="search-clear-btn" id="searchClearBtn"
+                            onclick="clearSearch()" title="Clear">✕</button>
                 </div>
             </div>
 
+            <!-- Right Actions -->
             <div class="nav-right">
                 <button class="btn-icon btn-ghost sm" onclick="refreshData()" title="Refresh">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6
+                                 M2 11.5a10 10 0 0 1 18.8-4.3
+                                 M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    </svg>
                 </button>
 
+                <div class="nav-separator"></div>
+
+                <!-- User Menu -->
                 <div class="user-profile-btn" onclick="toggleUserMenu()" id="userMenuBtn">
                     <div class="user-avatar" id="userAvatar">U</div>
                     <div class="user-details">
@@ -51,20 +134,34 @@
                         <span class="user-role" id="userRole">user</span>
                     </div>
                     <span class="chevron-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m6 9 6 6 6-6"/>
+                        </svg>
                     </span>
+
                     <div class="user-dropdown" id="userDropdown">
                         <button class="dropdown-item" onclick="showChangePasswordModal()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78
+                                         5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3"/>
+                            </svg>
                             Change Password
                         </button>
                         <button class="dropdown-item" onclick="clearAllCache()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18"/>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            </svg>
                             Clear Cache
                         </button>
                         <div class="dropdown-divider"></div>
                         <button class="dropdown-item danger" onclick="handleLogout()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                <polyline points="16 17 21 12 16 7"/>
+                                <line x1="21" y1="12" x2="9" y2="12"/>
+                            </svg>
                             Sign Out
                         </button>
                     </div>
@@ -72,8 +169,9 @@
             </div>
         </nav>
 
-        <!-- MAIN -->
+        <!-- ══════════ MAIN CONTENT ══════════ -->
         <div class="main-container">
+
             <!-- Page Header -->
             <div class="page-header">
                 <div class="page-header-left">
@@ -89,7 +187,10 @@
             <div class="stats-grid stagger-children">
                 <div class="stat-card">
                     <div class="stat-icon-wrap blue">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2"/>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                        </svg>
                     </div>
                     <div class="stat-info">
                         <div class="stat-value" id="statMakes">0</div>
@@ -98,7 +199,14 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon-wrap emerald">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m7.5 4.27 9 5.15"/>
+                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4
+                                     A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0
+                                     l7-4A2 2 0 0 0 21 16Z"/>
+                            <path d="m3.3 7 8.7 5 8.7-5"/>
+                            <path d="M12 22V12"/>
+                        </svg>
                     </div>
                     <div class="stat-info">
                         <div class="stat-value" id="statProducts">0</div>
@@ -107,7 +215,10 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon-wrap violet">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
                     </div>
                     <div class="stat-info">
                         <div class="stat-value" id="statValue">—</div>
@@ -116,7 +227,13 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon-wrap amber">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12
+                                     a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
                     </div>
                     <div class="stat-info">
                         <div class="stat-value" id="statShowing">0</div>
@@ -125,25 +242,34 @@
                 </div>
             </div>
 
-            <!-- CONTROL BAR -->
+            <!-- Control Bar -->
             <div class="control-bar">
                 <div class="make-selector-wrap">
                     <label class="control-label">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2"/>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                        </svg>
                         Select Brand / Make
                     </label>
                     <div class="make-select-group">
-                        <select class="form-select make-select" id="makeSelect" onchange="handleMakeChange(this.value)">
+                        <select class="form-select make-select" id="makeSelect"
+                                onchange="handleMakeChange(this.value)">
                             <option value="">— Select a brand —</option>
                         </select>
-                        <button class="btn btn-ghost sm" onclick="resetView()" title="Clear"
-                                id="clearMakeBtn" style="display:none;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <button class="btn btn-ghost sm" onclick="resetView()"
+                                title="Clear" id="clearMakeBtn" style="display:none;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
                         </button>
                     </div>
                 </div>
 
-                <!-- Selected Make Card (shown after selection) -->
+                <!-- Selected Make Card -->
                 <div class="selected-make-card" id="selectedMakeCard">
                     <div class="make-card-image-wrap" id="makeCardImageWrap">
                         <div class="make-card-image-fallback" id="makeCardFallback"></div>
@@ -155,17 +281,25 @@
                 </div>
             </div>
 
-            <!-- SEARCH BAR -->
+            <!-- Search Results Bar -->
             <div class="search-bar" id="searchBar">
                 <div class="search-info">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <span id="searchInfoText">Found <strong id="searchCount">0</strong> results for "<span id="searchQueryDisplay"></span>"</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <span id="searchInfoText">
+                        Found <strong id="searchCount">0</strong> results for
+                        "<span id="searchQueryDisplay"></span>"
+                    </span>
                 </div>
                 <button class="clear-btn" onclick="clearSearch()">✕ Clear</button>
             </div>
 
-            <!-- CANVAS AREA -->
+            <!-- Canvas Area -->
             <div class="canvas-area" id="canvasArea">
+
                 <!-- Make Banner -->
                 <div class="make-banner" id="makeBanner" style="display:none;">
                     <div class="make-banner-left">
@@ -180,59 +314,112 @@
                     </div>
                 </div>
 
-                <!-- Canvas Toolbar -->
+                <!-- Toolbar -->
                 <div class="canvas-toolbar" id="canvasToolbar" style="display:none;">
                     <div class="toolbar-left">
                         <span class="record-count" id="recordCount">0 records</span>
                     </div>
                     <div class="toolbar-right">
                         <div class="table-search-box">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            <input type="text" id="tableSearch" placeholder="Filter in table..." oninput="filterTable(this.value)">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <input type="text" id="tableSearch"
+                                   placeholder="Filter in table..."
+                                   oninput="filterTable(this.value)">
                         </div>
                         <div class="view-switcher">
-                            <button class="active" id="tableViewBtn" onclick="setViewMode('table')" title="Table">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+                            <button class="active" id="tableViewBtn"
+                                    onclick="setViewMode('table')" title="Table">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <path d="M3 9h18M3 15h18M9 3v18"/>
+                                </svg>
                             </button>
-                            <button id="cardViewBtn" onclick="setViewMode('cards')" title="Cards">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                            <button id="cardViewBtn"
+                                    onclick="setViewMode('cards')" title="Cards">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                </svg>
                             </button>
                         </div>
                         <button class="btn btn-secondary sm" onclick="exportToCSV()">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
                             Export
                         </button>
                     </div>
                 </div>
 
-                <!-- TABLE -->
+                <!-- Table View -->
                 <div id="tableContainer" class="table-container" style="display:none;">
                     <table class="products-table" id="productsTable">
                         <thead>
                             <tr>
                                 <th class="col-slno" data-sort="slno" onclick="sortTable('slno')">
                                     <span>Sl.No</span>
-                                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                                    <svg class="sort-icon" width="11" height="11"
+                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2">
+                                        <path d="m7 15 5 5 5-5"/>
+                                        <path d="m7 9 5-5 5 5"/>
+                                    </svg>
                                 </th>
                                 <th class="col-make" data-sort="make" onclick="sortTable('make')">
                                     <span>Make</span>
-                                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                                    <svg class="sort-icon" width="11" height="11"
+                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2">
+                                        <path d="m7 15 5 5 5-5"/>
+                                        <path d="m7 9 5-5 5 5"/>
+                                    </svg>
                                 </th>
                                 <th class="col-model" data-sort="model" onclick="sortTable('model')">
                                     <span>Model</span>
-                                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                                    <svg class="sort-icon" width="11" height="11"
+                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2">
+                                        <path d="m7 15 5 5 5-5"/>
+                                        <path d="m7 9 5-5 5 5"/>
+                                    </svg>
                                 </th>
                                 <th class="col-desc" data-sort="desc" onclick="sortTable('desc')">
                                     <span>Description</span>
-                                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                                    <svg class="sort-icon" width="11" height="11"
+                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2">
+                                        <path d="m7 15 5 5 5-5"/>
+                                        <path d="m7 9 5-5 5 5"/>
+                                    </svg>
                                 </th>
                                 <th class="col-qty" data-sort="qty" onclick="sortTable('qty')">
                                     <span>Qty</span>
-                                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                                    <svg class="sort-icon" width="11" height="11"
+                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2">
+                                        <path d="m7 15 5 5 5-5"/>
+                                        <path d="m7 9 5-5 5 5"/>
+                                    </svg>
                                 </th>
                                 <th class="col-price" data-sort="price" onclick="sortTable('price')">
                                     <span>Net Price</span>
-                                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                                    <svg class="sort-icon" width="11" height="11"
+                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2">
+                                        <path d="m7 15 5 5 5-5"/>
+                                        <path d="m7 9 5-5 5 5"/>
+                                    </svg>
                                 </th>
                             </tr>
                         </thead>
@@ -241,32 +428,45 @@
                     </table>
                 </div>
 
-                <!-- CARDS -->
+                <!-- Card View -->
                 <div id="cardContainer" class="card-container" style="display:none;"></div>
 
-                <!-- EMPTY -->
+                <!-- Empty State -->
                 <div class="canvas-empty" id="canvasEmpty">
                     <div class="empty-illus">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
                     </div>
                     <h3 id="emptyTitle">Select a brand to view products</h3>
-                    <p id="emptySubtitle">Use the dropdown above to load the product catalog for that brand.</p>
+                    <p id="emptySubtitle">
+                        Use the dropdown above to load the product catalog for that brand.
+                    </p>
                 </div>
 
-                <!-- ERROR -->
+                <!-- Error State -->
                 <div class="canvas-error" id="canvasError" style="display:none;">
                     <div class="error-illus">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
                     </div>
                     <h3>Failed to load data</h3>
                     <p id="canvasErrorMsg">Something went wrong.</p>
-                    <button class="btn btn-primary sm" onclick="refreshData()" style="margin-top:14px;">Retry</button>
+                    <button class="btn btn-primary sm" onclick="refreshData()"
+                            style="margin-top:14px;">Retry</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- PRODUCT DETAIL MODAL -->
+    <!-- Product Detail Modal -->
     <div class="modal-overlay" id="productModal">
         <div class="modal-container wide">
             <div class="modal-header">
@@ -280,7 +480,7 @@
         </div>
     </div>
 
-    <!-- CHANGE PASSWORD MODAL -->
+    <!-- Change Password Modal -->
     <div class="modal-overlay" id="changePasswordModal">
         <div class="modal-container">
             <div class="modal-header">
@@ -292,17 +492,22 @@
                 <form id="changePasswordForm" onsubmit="handleChangePassword(event)" novalidate>
                     <div class="form-group">
                         <label class="form-label">Current Password</label>
-                        <input type="password" class="form-input" id="currentPassword" placeholder="Enter current password" required>
+                        <input type="password" class="form-input" id="currentPassword"
+                               placeholder="Enter current password" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">New Password</label>
-                        <input type="password" class="form-input" id="newPwd" placeholder="Min. 8 characters" required minlength="8">
+                        <input type="password" class="form-input" id="newPwd"
+                               placeholder="Min. 8 characters" required minlength="8">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Confirm New Password</label>
-                        <input type="password" class="form-input" id="confirmNewPwd" placeholder="Confirm password" required>
+                        <input type="password" class="form-input" id="confirmNewPwd"
+                               placeholder="Confirm password" required>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">Update Password</button>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Update Password
+                    </button>
                 </form>
             </div>
         </div>
