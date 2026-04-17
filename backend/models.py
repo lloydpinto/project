@@ -12,14 +12,17 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
-    role = db.Column(db.String(20), default='user')
-    is_active = db.Column(db.Boolean, default=True)
+    role = db.Column(db.String(20), default='user', nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     machine_id = db.Column(db.String(255), nullable=True)
     last_login = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     reset_token = db.Column(db.String(255), nullable=True)
     reset_token_expiry = db.Column(db.DateTime, nullable=True)
+
+    def __repr__(self):
+        return f'<User {self.username} ({self.email})>'
 
     def to_dict(self):
         return {
@@ -31,7 +34,7 @@ class User(db.Model):
             'role': self.role,
             'is_active': self.is_active,
             'last_login': self.last_login.isoformat() if self.last_login else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 
 

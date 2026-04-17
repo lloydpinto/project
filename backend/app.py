@@ -2,43 +2,72 @@ import os
 import sys
 import tempfile
 
-# ── Path setup ──
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# ── Resolve writable DB path ──
+# ════════════════════════════════════════════════════
+#  RESOLVE DATABASE PATH — GUARANTEED PERSISTENT
+# ════════════════════════════════════════════════════
+
 def _resolve_db_uri():
-    env_url = os.environ.get('DATABASE_URL', '')
+    """
+    Find a writable, persistent location for the SQLite database.
+    Returns a full sqlite:/// URI.
+    """
+    # 1. Check environment variable first
+    env_url = os.environ.get('DATABASE_URL', '').strip()
     if env_url:
         if env_url.startswith('postgres://'):
             env_url = env_url.replace('postgres://', 'postgresql://', 1)
+        print(f"[DB] Using DATABASE_URL from environment")
         return env_url
+
+    # 2. Try locations in order (most persistent first)
+    db_filename = 'authorized_partners.db'
     candidates = [
-        os.path.join(BASE_DIR, 'authorized_partners.db'),
-        os.path.join(os.path.dirname(BASE_DIR), 'authorized_partners.db'),
-        os.path.join(tempfile.gettempdir(), 'authorized_partners.db'),
-        '/tmp/authorized_partners.db',
+        os.path.join(BASE_DIR, db_filename),                              # Same as app.py
+        os.path.join(BASE_DIR, 'data', db_filename),                      # data subfolder
+        os.path.join(os.path.dirname(BASE_DIR), db_filename),             # Parent folder
+        os.path.join(os.path.expanduser('~'), '.ap_data', db_filename),   # Home directory
+        os.path.join(tempfile.gettempdir(), db_filename),                  # Temp (last resort)
     ]
+
     for path in candidates:
+        abs_path = os.path.abspath(path)
+        folder = os.path.dirname(abs_path)
         try:
-            folder = os.path.dirname(path) or '.'
             os.makedirs(folder, exist_ok=True)
-            probe = os.path.join(folder, '.db_probe')
-            with open(probe, 'w') as fh:
-                fh.write('ok')
-            os.remove(probe)
-            print(f"[DB] Using: {path}")
-            return f'sqlite:///{path}'
-        except Exception as exc:
-            print(f"[DB] Skipping {path}: {exc}")
-    fallback = os.path.join(tempfile.gettempdir(), 'authorized_partners.db')
+            # Test write permission
+            test_file = os.path.join(folder, '.db_write_test')
+            with open(test_file, 'w') as f:
+                f.write('ok')
+            os.remove(test_file)
+
+            # If DB file already exists here, definitely use it
+            if os.path.exists(abs_path):
+                size = os.path.getsize(abs_path)
+                print(f"[DB] Found existing DB: {abs_path} ({size} bytes)")
+                return f'sqlite:///{abs_path}'
+
+            print(f"[DB] Will create DB at: {abs_path}")
+            return f'sqlite:///{abs_path}'
+        except (OSError, PermissionError) as e:
+            print(f"[DB] Cannot use {abs_path}: {e}")
+            continue
+
+    # Ultimate fallback
+    fallback = os.path.join(tempfile.gettempdir(), db_filename)
+    print(f"[DB] WARNING: Using temp fallback: {fallback}")
     return f'sqlite:///{fallback}'
 
 
 DB_URI = _resolve_db_uri()
 
-# ── Imports ──
+# ════════════════════════════════════════════════════
+#  IMPORTS
+# ════════════════════════════════════════════════════
+
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 from flask_jwt_extended import (
@@ -46,85 +75,183 @@ from flask_jwt_extended import (
     get_jwt_identity, create_refresh_token
 )
 from flask_bcrypt import Bcrypt
-from flask_mail import Mail, Message
 from datetime import datetime, timedelta
-import json, uuid, secrets, hashlib
+import json
+import uuid
+import secrets
+import hashlib
 import platform as _platform
-from dotenv import load_dotenv
 
-load_dotenv()
+try:
+    from flask_mail import Mail, Message
+    MAIL_AVAILABLE = True
+except ImportError:
+    MAIL_AVAILABLE = False
+    print("[Mail] flask-mail not installed, email features disabled")
 
-# ── Paths ──
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# ════════════════════════════════════════════════════
+#  PATHS
+# ════════════════════════════════════════════════════
+
 FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), 'frontend')
 if not os.path.isdir(FRONTEND_DIR):
     FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
-COMPANY_NAME  = os.environ.get('COMPANY_NAME', 'Authorized Partners')
-FRONTEND_URL  = os.environ.get('FRONTEND_URL', 'http://localhost:5000')
+COMPANY_NAME = os.environ.get('COMPANY_NAME', 'Authorized Partners')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5000')
 
-print(f"[App] BASE_DIR    : {BASE_DIR}")
-print(f"[App] FRONTEND    : {FRONTEND_DIR} (exists={os.path.isdir(FRONTEND_DIR)})")
-print(f"[App] DB_URI      : {DB_URI}")
-print(f"[App] COMPANY     : {COMPANY_NAME}")
-print(f"[App] FRONTEND_URL: {FRONTEND_URL}")
+print(f"[App] BASE_DIR     : {BASE_DIR}")
+print(f"[App] FRONTEND_DIR : {FRONTEND_DIR} (exists={os.path.isdir(FRONTEND_DIR)})")
+print(f"[App] DB_URI       : {DB_URI}")
 
-# ── Flask App ──
+# ════════════════════════════════════════════════════
+#  FLASK APP
+# ════════════════════════════════════════════════════
+
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 
-# ── Config ──
+# Config
 app.config.update(
-    SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret-change-me'),
-    JWT_SECRET_KEY=os.environ.get('JWT_SECRET_KEY', 'dev-jwt-change-me'),
-    JWT_ACCESS_TOKEN_EXPIRES=timedelta(hours=8),
+    SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret-please-change-this-in-production'),
+    JWT_SECRET_KEY=os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-please-change-this'),
+    JWT_ACCESS_TOKEN_EXPIRES=timedelta(hours=12),
     SQLALCHEMY_DATABASE_URI=DB_URI,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SQLALCHEMY_ENGINE_OPTIONS={
         'pool_pre_ping': True,
         'pool_recycle': 300,
-        'connect_args': ({'check_same_thread': False}
-                         if DB_URI.startswith('sqlite') else {}),
+        'connect_args': (
+            {'check_same_thread': False, 'timeout': 30}
+            if DB_URI.startswith('sqlite') else {}
+        ),
     },
     MAX_CONTENT_LENGTH=50 * 1024 * 1024,
     PRODUCTS_JSON_PATH=os.path.join(DATA_DIR, 'products.json'),
-    # ── Mail ──
+    # Mail
     MAIL_SERVER=os.environ.get('MAIL_SERVER', 'smtp.gmail.com'),
     MAIL_PORT=int(os.environ.get('MAIL_PORT', 587)),
     MAIL_USE_TLS=os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true',
-    MAIL_USE_SSL=os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true',
     MAIL_USERNAME=os.environ.get('MAIL_USERNAME', ''),
     MAIL_PASSWORD=os.environ.get('MAIL_PASSWORD', ''),
     MAIL_DEFAULT_SENDER=(
         COMPANY_NAME,
-        os.environ.get('MAIL_DEFAULT_SENDER',
-                       os.environ.get('MAIL_USERNAME', ''))
+        os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME', ''))
     ),
-    MAIL_MAX_EMAILS=None,
-    MAIL_ASCII_ATTACHMENTS=False,
 )
 
-# ── Extensions ──
+# Extensions
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
-jwt   = JWTManager(app)
+jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
-mail  = Mail(app)
+mail = Mail(app) if MAIL_AVAILABLE else None
 
-# ── Database ──
-DB_AVAILABLE = False
+# ════════════════════════════════════════════════════
+#  DATABASE INIT
+# ════════════════════════════════════════════════════
+
+DB_OK = False
 try:
     from database import db, init_db
     from models import User, LoginHistory, ProductCache
     init_db(app)
-    DB_AVAILABLE = True
-    print("[DB] Initialized OK")
-except Exception as _err:
-    print(f"[DB] Init failed: {_err}")
+    DB_OK = True
+except Exception as e:
+    print(f"[DB] CRITICAL: {e}")
+    import traceback
+    traceback.print_exc()
+
+# ════════════════════════════════════════════════════
+#  VERIFY DATABASE IS WORKING
+# ════════════════════════════════════════════════════
+
+def _verify_db():
+    """Run a quick read/write test on the database."""
+    if not DB_OK:
+        return False
+    try:
+        with app.app_context():
+            count = User.query.count()
+            print(f"[DB] Verification: {count} users in database")
+
+            # Test write capability
+            from sqlalchemy import text
+            db.session.execute(text("SELECT 1"))
+            db.session.commit()
+            print("[DB] ✓ Read/write verification passed")
+            return True
+    except Exception as e:
+        print(f"[DB] ✗ Verification failed: {e}")
+        return False
 
 
-# ════════════════════════════════════════════════
-#  UTILITY
-# ════════════════════════════════════════════════
+DB_VERIFIED = _verify_db()
+
+# ════════════════════════════════════════════════════
+#  SEED DEFAULT USERS
+# ════════════════════════════════════════════════════
+
+def _seed():
+    if not DB_OK:
+        return
+    try:
+        with app.app_context():
+            existing = User.query.count()
+            if existing > 0:
+                print(f"[Seed] Database has {existing} users — skipping seed")
+                return
+
+            users = [
+                User(
+                    id=str(uuid.uuid4()),
+                    username='admin',
+                    email='admin@authorizedpartners.com',
+                    password_hash=bcrypt.generate_password_hash('Admin@123').decode(),
+                    first_name='System', last_name='Administrator',
+                    role='admin', is_active=True,
+                ),
+                User(
+                    id=str(uuid.uuid4()),
+                    username='demo',
+                    email='demo@authorizedpartners.com',
+                    password_hash=bcrypt.generate_password_hash('Demo@123').decode(),
+                    first_name='Demo', last_name='User',
+                    role='user', is_active=True,
+                ),
+            ]
+            db.session.add_all(users)
+            db.session.commit()
+
+            # Verify they were actually saved
+            verify_count = User.query.count()
+            print(f"[Seed] Created {len(users)} users — DB now has {verify_count} users")
+
+            # Print all users for debugging
+            all_users = User.query.all()
+            for u in all_users:
+                print(f"  → {u.username} ({u.email}) role={u.role}")
+
+    except Exception as e:
+        print(f"[Seed] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+_seed()
+
+# ════════════════════════════════════════════════════
+#  UTILITY FUNCTIONS
+# ════════════════════════════════════════════════════
 
 def _safe_num(val, default=0):
     if val is None:
@@ -137,35 +264,34 @@ def _safe_num(val, default=0):
 
 def _gen_machine_id():
     try:
-        raw = f"{_platform.node()}-{_platform.system()}"
+        raw = f"{_platform.node()}-{_platform.system()}-{os.getpid()}"
         return hashlib.sha256(raw.encode()).hexdigest()[:32]
     except Exception:
         return str(uuid.uuid4())[:32]
 
 
 def _products_path():
-    return app.config.get('PRODUCTS_JSON_PATH',
-                          os.path.join(DATA_DIR, 'products.json'))
+    return app.config.get('PRODUCTS_JSON_PATH', os.path.join(DATA_DIR, 'products.json'))
 
 
 def _ensure_products():
     path = _products_path()
     if not os.path.exists(path):
         default = {"Sheet1": [
-            {"Sl.No": 1, "Make": "Sample Brand", "Model": "SB-001",
-             "Description": "Sample product", "Quantity": 1, "Net Price": 1000.0}
+            {"Sl.No": 1, "Make": "Sample", "Model": "S-001",
+             "Description": "Sample product", "Quantity": 1, "Net Price": 1000}
         ]}
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'w', encoding='utf-8') as fh:
-            json.dump(default, fh, indent=2)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(default, f, indent=2)
 
 
 def load_products():
     _ensure_products()
     path = _products_path()
     try:
-        with open(path, 'r', encoding='utf-8') as fh:
-            data = json.load(fh)
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
         if not isinstance(data, dict):
             return {"Sheet1": []}
         if 'Sheet1' not in data:
@@ -188,318 +314,68 @@ def load_products():
                 'Model': str(row.get('Model', '') or '').strip(),
                 'Description': str(row.get('Description', '') or '').strip() or None,
                 'Quantity': _safe_num(row.get('Quantity'), 1),
-                'Net Price': _safe_num(row.get('Net Price'), 0.0),
+                'Net Price': _safe_num(row.get('Net Price'), 0),
             })
         data['Sheet1'] = clean
         return data
-    except Exception as exc:
-        return {"Sheet1": [], "error": str(exc)}
+    except Exception as e:
+        return {"Sheet1": [], "error": str(e)}
 
 
 def save_products(data):
     path = _products_path()
-    backup = path + '.backup'
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         if os.path.exists(path):
             import shutil
-            shutil.copy2(path, backup)
+            shutil.copy2(path, path + '.backup')
         tmp = path + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as fh:
-            json.dump(data, fh, indent=2, ensure_ascii=False)
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
         os.replace(tmp, path)
         return True, "Saved"
-    except Exception as exc:
-        if os.path.exists(backup):
-            import shutil
-            shutil.copy2(backup, path)
-        return False, str(exc)
+    except Exception as e:
+        return False, str(e)
 
 
-# ════════════════════════════════════════════════
-#  EMAIL HELPERS
-# ════════════════════════════════════════════════
-
-LOGO_URL = os.environ.get('LOGO_URL', '')
-
-def _email_base(title, preview_text=''):
-    """Returns the opening HTML for all emails."""
-    logo_html = ''
-    if LOGO_URL:
-        logo_html = f'''
-        <div style="text-align:center;margin-bottom:24px;">
-            <img src="{LOGO_URL}" alt="{COMPANY_NAME}"
-                 style="max-height:60px;max-width:200px;object-fit:contain;">
-        </div>'''
-    else:
-        logo_html = f'''
-        <div style="text-align:center;margin-bottom:24px;">
-            <div style="display:inline-block;background:linear-gradient(135deg,#0f2027,#2c5364);
-                        padding:12px 24px;border-radius:10px;">
-                <span style="color:white;font-weight:800;font-size:18px;
-                             letter-spacing:-0.02em;">{COMPANY_NAME}</span>
-            </div>
-        </div>'''
-
-    return f'''<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title}</title>
-</head>
-<body style="margin:0;padding:0;background:#f5f6f8;
-             font-family:'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
-<span style="display:none;max-height:0;overflow:hidden;">{preview_text}</span>
-
-<!-- Wrapper -->
-<table width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="background:#f5f6f8;padding:40px 16px;">
-  <tr>
-    <td align="center">
-      <!-- Card -->
-      <table width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="max-width:560px;background:#ffffff;border-radius:16px;
-                    box-shadow:0 4px 24px rgba(16,24,40,0.08);overflow:hidden;">
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%);
-                     padding:32px 40px 28px;">
-            {logo_html}
-            <h1 style="margin:0;color:white;font-size:22px;font-weight:800;
-                       letter-spacing:-0.02em;text-align:center;">{title}</h1>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr>
-          <td style="padding:36px 40px;">
-'''
-
-
-def _email_footer():
-    return f'''
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f8f9fb;padding:24px 40px;
-                     border-top:1px solid #e5e7ec;text-align:center;">
-            <p style="margin:0 0 8px;color:#8b91a0;font-size:13px;line-height:1.6;">
-              This email was sent by <strong>{COMPANY_NAME}</strong>.
-              If you did not request this, please ignore this email.
-            </p>
-            <p style="margin:0;color:#a3aab8;font-size:12px;">
-              © {datetime.utcnow().year} {COMPANY_NAME}. All rights reserved.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
-</body>
-</html>'''
-
-
-def send_password_reset_email(user, reset_token):
-    """Send a professional password reset email with a clickable link."""
-    reset_url = f"{FRONTEND_URL}/forgot-password?token={reset_token}&email={user.email}"
-    expires_min = 60
-
-    html_body = _email_base(
-        title='Reset Your Password',
-        preview_text='You requested a password reset. Click the button below.'
-    ) + f'''
-    <p style="margin:0 0 16px;color:#5a6070;font-size:16px;line-height:1.7;">
-        Hi <strong style="color:#1a1d23;">{user.first_name}</strong>,
-    </p>
-    <p style="margin:0 0 24px;color:#5a6070;font-size:15px;line-height:1.7;">
-        We received a request to reset the password for your
-        <strong>{COMPANY_NAME}</strong> account.
-        Click the button below to choose a new password.
-    </p>
-
-    <!-- Reset Button -->
-    <div style="text-align:center;margin:32px 0;">
-        <a href="{reset_url}"
-           style="display:inline-block;background:linear-gradient(135deg,#1a5cf5,#1448e1);
-                  color:white;text-decoration:none;font-size:16px;font-weight:700;
-                  padding:16px 40px;border-radius:10px;
-                  box-shadow:0 4px 16px rgba(26,92,245,0.35);letter-spacing:-0.01em;">
-            Reset My Password
-        </a>
-    </div>
-
-    <!-- Expiry Notice -->
-    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;
-                padding:14px 18px;margin:24px 0;display:flex;align-items:flex-start;gap:10px;">
-        <span style="font-size:18px;">⏰</span>
-        <p style="margin:0;color:#92400e;font-size:14px;line-height:1.6;">
-            This link will expire in <strong>{expires_min} minutes</strong>.
-            After that you will need to request a new reset link.
-        </p>
-    </div>
-
-    <!-- Fallback URL -->
-    <p style="margin:24px 0 8px;color:#8b91a0;font-size:13px;line-height:1.6;">
-        If the button above doesn't work, copy and paste this link into your browser:
-    </p>
-    <div style="background:#f5f6f8;border:1px solid #e5e7ec;border-radius:8px;
-                padding:12px 16px;word-break:break-all;">
-        <a href="{reset_url}"
-           style="color:#1a5cf5;font-size:13px;text-decoration:none;">{reset_url}</a>
-    </div>
-
-    <p style="margin:24px 0 0;color:#8b91a0;font-size:13px;line-height:1.6;">
-        If you didn't request a password reset, you can safely ignore this email —
-        your password will not be changed.
-    </p>
-''' + _email_footer()
-
-    # Plain-text fallback
-    text_body = f"""Hi {user.first_name},
-
-We received a request to reset the password for your {COMPANY_NAME} account.
-
-Reset your password by visiting:
-{reset_url}
-
-This link expires in {expires_min} minutes.
-
-If you did not request a password reset, ignore this email.
-
-— {COMPANY_NAME} Team
-"""
-
+def _log_login(user_id, machine_id, status):
+    """Log a login attempt. Never fails."""
     try:
-        msg = Message(
-            subject=f'Reset your {COMPANY_NAME} password',
-            recipients=[user.email],
-            body=text_body,
-            html=html_body,
+        entry = LoginHistory(
+            user_id=user_id,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', '')[:500],
+            machine_id=machine_id,
+            status=status,
         )
-        mail.send(msg)
-        print(f"[Mail] Reset email sent to {user.email}")
-        return True
-    except Exception as exc:
-        print(f"[Mail] Failed to send to {user.email}: {exc}")
-        return False
-
-
-def send_welcome_email(user):
-    """Send a welcome email after successful registration."""
-    html_body = _email_base(
-        title=f'Welcome to {COMPANY_NAME}!',
-        preview_text=f'Your account has been created successfully.'
-    ) + f'''
-    <p style="margin:0 0 16px;color:#5a6070;font-size:16px;line-height:1.7;">
-        Hi <strong style="color:#1a1d23;">{user.first_name} {user.last_name}</strong>,
-    </p>
-    <p style="margin:0 0 24px;color:#5a6070;font-size:15px;line-height:1.7;">
-        Welcome to <strong>{COMPANY_NAME}</strong>!
-        Your account has been created successfully.
-        You can now log in and start managing your authorized partner catalog.
-    </p>
-
-    <!-- Account Details -->
-    <div style="background:#f5f6f8;border:1px solid #e5e7ec;border-radius:10px;
-                padding:20px 24px;margin:24px 0;">
-        <h3 style="margin:0 0 14px;color:#1a1d23;font-size:15px;font-weight:700;">
-            Your Account Details
-        </h3>
-        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr>
-                <td style="padding:6px 0;color:#8b91a0;font-size:14px;width:40%;">Username</td>
-                <td style="padding:6px 0;color:#1a1d23;font-size:14px;font-weight:600;">
-                    {user.username}
-                </td>
-            </tr>
-            <tr>
-                <td style="padding:6px 0;color:#8b91a0;font-size:14px;">Email</td>
-                <td style="padding:6px 0;color:#1a1d23;font-size:14px;font-weight:600;">
-                    {user.email}
-                </td>
-            </tr>
-        </table>
-    </div>
-
-    <!-- Login Button -->
-    <div style="text-align:center;margin:28px 0;">
-        <a href="{FRONTEND_URL}"
-           style="display:inline-block;background:linear-gradient(135deg,#1a5cf5,#1448e1);
-                  color:white;text-decoration:none;font-size:15px;font-weight:700;
-                  padding:14px 36px;border-radius:10px;
-                  box-shadow:0 4px 16px rgba(26,92,245,0.3);">
-            Go to Login
-        </a>
-    </div>
-''' + _email_footer()
-
-    text_body = f"""Hi {user.first_name},
-
-Welcome to {COMPANY_NAME}!
-Your account has been created successfully.
-
-Username: {user.username}
-Email:    {user.email}
-
-Login at: {FRONTEND_URL}
-
-— {COMPANY_NAME} Team
-"""
-
-    try:
-        msg = Message(
-            subject=f'Welcome to {COMPANY_NAME}!',
-            recipients=[user.email],
-            body=text_body,
-            html=html_body,
-        )
-        mail.send(msg)
-        print(f"[Mail] Welcome email sent to {user.email}")
-    except Exception as exc:
-        print(f"[Mail] Welcome email failed: {exc}")
-
-
-# ════════════════════════════════════════════════
-#  SEED
-# ════════════════════════════════════════════════
-
-def _seed_users():
-    if not DB_AVAILABLE:
-        return
-    try:
-        with app.app_context():
-            if User.query.count() == 0:
-                users = [
-                    User(id=str(uuid.uuid4()), username='admin',
-                         email='admin@authorizedpartners.com',
-                         password_hash=bcrypt.generate_password_hash('Admin@123').decode(),
-                         first_name='System', last_name='Administrator',
-                         role='admin', is_active=True),
-                    User(id=str(uuid.uuid4()), username='demo',
-                         email='demo@authorizedpartners.com',
-                         password_hash=bcrypt.generate_password_hash('Demo@123').decode(),
-                         first_name='Demo', last_name='User',
-                         role='user', is_active=True),
-                ]
-                db.session.add_all(users)
-                db.session.commit()
-                print("[Seed] admin/Admin@123 | demo/Demo@123")
-    except Exception as exc:
-        print(f"[Seed] {exc}")
+        db.session.add(entry)
+        db.session.commit()
+    except Exception:
         try:
             db.session.rollback()
         except Exception:
             pass
 
 
-_seed_users()
+def _send_email(to_email, subject, html_body, text_body):
+    """Send email. Returns True on success, False on failure."""
+    if not mail or not app.config.get('MAIL_USERNAME'):
+        print(f"[Mail] Not configured — skipping email to {to_email}")
+        return False
+    try:
+        msg = Message(subject=subject, recipients=[to_email],
+                      body=text_body, html=html_body)
+        mail.send(msg)
+        print(f"[Mail] Sent to {to_email}: {subject}")
+        return True
+    except Exception as e:
+        print(f"[Mail] Error sending to {to_email}: {e}")
+        return False
 
 
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 #  SERVE FRONTEND
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 
 @app.route('/')
 def serve_index():
@@ -519,14 +395,12 @@ def serve_forgot():
 @app.route('/css/<path:fn>')
 def serve_css(fn):
     d = os.path.join(FRONTEND_DIR, 'css')
-    f = os.path.join(d, fn)
-    return send_from_directory(d, fn) if os.path.exists(f) else ('', 404)
+    return send_from_directory(d, fn) if os.path.exists(os.path.join(d, fn)) else ('', 404)
 
 @app.route('/js/<path:fn>')
 def serve_js(fn):
     d = os.path.join(FRONTEND_DIR, 'js')
-    f = os.path.join(d, fn)
-    return send_from_directory(d, fn) if os.path.exists(f) else ('', 404)
+    return send_from_directory(d, fn) if os.path.exists(os.path.join(d, fn)) else ('', 404)
 
 @app.route('/favicon.ico')
 def favicon():
@@ -541,137 +415,266 @@ def catch_all(path):
     return send_file(idx) if os.path.exists(idx) else ('Not found', 404)
 
 
-# ════════════════════════════════════════════════
-#  HEALTH
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
+#  HEALTH CHECK — SHOWS DB STATUS
+# ════════════════════════════════════════════════════
 
 @app.route('/api/health')
 def health():
-    mail_cfg = bool(app.config.get('MAIL_USERNAME'))
+    user_count = 0
+    db_file_exists = False
+    db_file_size = 0
+
+    if DB_OK:
+        try:
+            user_count = User.query.count()
+        except Exception:
+            pass
+
+    # Check if DB file actually exists on disk
+    if DB_URI.startswith('sqlite:///'):
+        db_path = DB_URI.replace('sqlite:///', '')
+        db_file_exists = os.path.exists(db_path)
+        if db_file_exists:
+            db_file_size = os.path.getsize(db_path)
+
     return jsonify({
         'status': 'ok',
-        'db': DB_AVAILABLE,
-        'mail_configured': mail_cfg,
+        'db_available': DB_OK,
+        'db_verified': DB_VERIFIED,
+        'db_file_exists': db_file_exists,
+        'db_file_size_kb': round(db_file_size / 1024, 1),
+        'user_count': user_count,
+        'mail_configured': bool(app.config.get('MAIL_USERNAME')),
         'frontend_exists': os.path.isdir(FRONTEND_DIR),
-        'ts': datetime.utcnow().isoformat(),
+        'timestamp': datetime.utcnow().isoformat(),
     })
 
 
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
+#  DEBUG — LIST ALL USERS (remove in production)
+# ════════════════════════════════════════════════════
+
+@app.route('/api/debug/users')
+def debug_users():
+    """Shows all registered users. REMOVE THIS IN PRODUCTION."""
+    if not DB_OK:
+        return jsonify({'error': 'DB not available'}), 503
+    try:
+        users = User.query.all()
+        return jsonify({
+            'count': len(users),
+            'users': [
+                {
+                    'username': u.username,
+                    'email': u.email,
+                    'role': u.role,
+                    'is_active': u.is_active,
+                    'created': u.created_at.isoformat() if u.created_at else None,
+                    'last_login': u.last_login.isoformat() if u.last_login else None,
+                }
+                for u in users
+            ],
+            'db_uri': DB_URI.split('///')[0] + '///***',
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ════════════════════════════════════════════════════
 #  AUTH — REGISTER
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    if not DB_AVAILABLE:
-        return jsonify({'error': 'Database unavailable'}), 503
+    if not DB_OK:
+        return jsonify({'error': 'Database is not available. Please try again later.'}), 503
 
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'No data received. Please fill in all fields.'}), 400
 
+    # Validate
     required = ['username', 'email', 'password', 'first_name', 'last_name']
     for field in required:
-        if not str(data.get(field, '')).strip():
+        val = str(data.get(field, '')).strip()
+        if not val:
             return jsonify({'error': f'"{field}" is required'}), 400
 
-    username   = data['username'].lower().strip()
-    email      = data['email'].lower().strip()
-    password   = data['password']
+    username = data['username'].lower().strip()
+    email = data['email'].lower().strip()
+    password = data['password']
     first_name = data['first_name'].strip()
-    last_name  = data['last_name'].strip()
+    last_name = data['last_name'].strip()
 
     if len(username) < 3:
         return jsonify({'error': 'Username must be at least 3 characters'}), 400
     if len(password) < 8:
         return jsonify({'error': 'Password must be at least 8 characters'}), 400
-    if '@' not in email:
-        return jsonify({'error': 'Invalid email address'}), 400
+    if '@' not in email or '.' not in email:
+        return jsonify({'error': 'Please enter a valid email address'}), 400
 
     try:
-        if User.query.filter_by(username=username).first():
-            return jsonify({'error': 'Username already taken'}), 409
-        if User.query.filter_by(email=email).first():
-            return jsonify({'error': 'Email already registered'}), 409
+        # Check if user already exists
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            return jsonify({'error': f'Username "{username}" is already taken'}), 409
 
-        user = User(
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email:
+            return jsonify({'error': f'Email "{email}" is already registered'}), 409
+
+        # Create user
+        pw_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        new_user = User(
             id=str(uuid.uuid4()),
-            username=username, email=email,
-            password_hash=bcrypt.generate_password_hash(password).decode('utf-8'),
-            first_name=first_name, last_name=last_name,
-            role='user', is_active=True,
+            username=username,
+            email=email,
+            password_hash=pw_hash,
+            first_name=first_name,
+            last_name=last_name,
+            role='user',
+            is_active=True,
             machine_id=data.get('machine_id') or _gen_machine_id(),
+            created_at=datetime.utcnow(),
         )
-        db.session.add(user)
+
+        db.session.add(new_user)
+        db.session.flush()  # Flush to get any constraint errors before commit
+
         db.session.commit()
+
+        # VERIFY the user was actually saved
+        saved_user = User.query.filter_by(username=username).first()
+        if not saved_user:
+            print(f"[Register] CRITICAL: User {username} was not saved!")
+            return jsonify({'error': 'Registration failed — user was not saved. Please try again.'}), 500
+
+        print(f"[Register] ✓ New user: {username} ({email}) — ID: {saved_user.id}")
+
+        # Print total user count for debugging
+        total = User.query.count()
+        print(f"[Register]   Total users in DB: {total}")
 
         # Send welcome email (non-blocking)
         try:
-            send_welcome_email(user)
+            welcome_html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:30px;">
+                <h2>Welcome to {COMPANY_NAME}!</h2>
+                <p>Hi {first_name},</p>
+                <p>Your account has been created successfully.</p>
+                <p><strong>Username:</strong> {username}<br>
+                   <strong>Email:</strong> {email}</p>
+                <p>You can now <a href="{FRONTEND_URL}">sign in</a> to your account.</p>
+                <p>— {COMPANY_NAME} Team</p>
+            </div>
+            """
+            welcome_text = f"Hi {first_name}, welcome to {COMPANY_NAME}! Your username: {username}"
+            _send_email(email, f'Welcome to {COMPANY_NAME}!', welcome_html, welcome_text)
         except Exception:
             pass
 
-        print(f"[Register] {username} / {email}")
-        return jsonify({'message': 'Registration successful', 'user': user.to_dict()}), 201
+        return jsonify({
+            'message': 'Registration successful! You can now sign in.',
+            'user': saved_user.to_dict(),
+        }), 201
 
     except Exception as exc:
+        print(f"[Register] Error: {exc}")
+        import traceback
+        traceback.print_exc()
+
         try:
             db.session.rollback()
         except Exception:
             pass
-        # Re-check duplicates
-        try:
-            if User.query.filter_by(username=username).first():
-                return jsonify({'error': 'Username already taken'}), 409
-            if User.query.filter_by(email=email).first():
-                return jsonify({'error': 'Email already registered'}), 409
-        except Exception:
-            pass
-        return jsonify({'error': f'Registration failed: {exc}'}), 500
+
+        error_msg = str(exc).lower()
+        if 'unique' in error_msg or 'duplicate' in error_msg:
+            if 'username' in error_msg:
+                return jsonify({'error': f'Username "{username}" is already taken'}), 409
+            if 'email' in error_msg:
+                return jsonify({'error': f'Email "{email}" is already registered'}), 409
+            return jsonify({'error': 'Username or email already exists'}), 409
+
+        return jsonify({'error': f'Registration failed: {str(exc)}'}), 500
 
 
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 #  AUTH — LOGIN
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    if not DB_AVAILABLE:
-        return jsonify({'error': 'Database unavailable'}), 503
+    if not DB_OK:
+        return jsonify({'error': 'Database is not available. Please try again later.'}), 503
 
-    data       = request.get_json(silent=True) or {}
-    username   = str(data.get('username', '')).lower().strip()
-    password   = str(data.get('password', ''))
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'No data received'}), 400
+
+    username = str(data.get('username', '')).lower().strip()
+    password = str(data.get('password', ''))
     machine_id = str(data.get('machine_id', ''))
 
-    if not username or not password:
-        return jsonify({'error': 'Username and password are required'}), 400
+    if not username:
+        return jsonify({'error': 'Username or email is required'}), 400
+    if not password:
+        return jsonify({'error': 'Password is required'}), 400
 
     try:
+        # Find user by username OR email
         user = User.query.filter(
             (User.username == username) | (User.email == username)
         ).first()
 
         if not user:
-            return jsonify({'error': 'Invalid credentials'}), 401
+            # Print debug info
+            total = User.query.count()
+            all_usernames = [u.username for u in User.query.all()]
+            print(f"[Login] User '{username}' not found. DB has {total} users: {all_usernames}")
+            return jsonify({'error': 'Invalid username or password'}), 401
+
         if not user.is_active:
-            return jsonify({'error': 'Account deactivated. Contact admin.'}), 403
+            return jsonify({'error': 'Your account has been deactivated. Contact administrator.'}), 403
+
+        # Verify password
         if not bcrypt.check_password_hash(user.password_hash, password):
             _log_login(user.id, machine_id, 'failed')
-            return jsonify({'error': 'Invalid credentials'}), 401
+            print(f"[Login] Wrong password for '{username}'")
+            return jsonify({'error': 'Invalid username or password'}), 401
 
+        # Success — update user record
         user.last_login = datetime.utcnow()
         if machine_id:
             user.machine_id = machine_id
+
+        try:
+            db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
         _log_login(user.id, machine_id, 'success')
 
+        # Create tokens
         access_token = create_access_token(
             identity=user.id,
-            additional_claims={'username': user.username, 'role': user.role},
-            expires_delta=timedelta(hours=8),
+            additional_claims={
+                'username': user.username,
+                'role': user.role,
+            },
+            expires_delta=timedelta(hours=12),
         )
         refresh_token = create_refresh_token(
             identity=user.id,
             expires_delta=timedelta(days=30),
         )
+
+        print(f"[Login] ✓ {user.username} ({user.email}) logged in")
+
         return jsonify({
             'message': 'Login successful',
             'access_token': access_token,
@@ -680,82 +683,82 @@ def login():
         }), 200
 
     except Exception as exc:
-        print(f"[Login] {exc}")
-        return jsonify({'error': str(exc)}), 500
+        print(f"[Login] Error: {exc}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Login error: {str(exc)}'}), 500
 
 
-def _log_login(user_id, machine_id, status):
-    try:
-        entry = LoginHistory(
-            user_id=user_id,
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent', '')[:500],
-            machine_id=machine_id, status=status,
-        )
-        db.session.add(entry)
-        db.session.commit()
-    except Exception:
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
-
-
-# ════════════════════════════════════════════════
-#  AUTH — FORGOT PASSWORD  (sends real email)
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
+#  AUTH — FORGOT PASSWORD
+# ════════════════════════════════════════════════════
 
 @app.route('/api/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    if not DB_AVAILABLE:
+    if not DB_OK:
         return jsonify({'error': 'Database unavailable'}), 503
 
-    data  = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}
     email = str(data.get('email', '')).lower().strip()
 
-    if not email:
-        return jsonify({'error': 'Email address is required'}), 400
-    if '@' not in email:
-        return jsonify({'error': 'Enter a valid email address'}), 400
+    if not email or '@' not in email:
+        return jsonify({'error': 'Please enter a valid email address'}), 400
 
-    # Always return the same message to prevent email enumeration
-    generic = {
-        'message': (
-            'If an account exists for that email address, '
-            'a password reset link has been sent. '
-            'Please check your inbox (and spam/junk folder).'
-        )
+    generic_msg = {
+        'message': 'If an account exists with that email, a reset link has been sent. Check your inbox and spam folder.'
     }
 
     try:
         user = User.query.filter_by(email=email).first()
-        if not user:
-            return jsonify(generic), 200
+        if not user or not user.is_active:
+            return jsonify(generic_msg), 200
 
-        if not user.is_active:
-            return jsonify(generic), 200
-
-        # Generate token
-        raw_token  = secrets.token_urlsafe(48)
-        token_hash = bcrypt.generate_password_hash(raw_token).decode('utf-8')
-        user.reset_token        = token_hash
+        raw_token = secrets.token_urlsafe(48)
+        user.reset_token = bcrypt.generate_password_hash(raw_token).decode('utf-8')
         user.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
         db.session.commit()
 
-        # Send email
-        email_sent = send_password_reset_email(user, raw_token)
+        reset_url = f"{FRONTEND_URL}/forgot-password?token={raw_token}&email={email}"
 
-        if not email_sent:
-            # Mail not configured — return token for dev/demo mode
-            mail_configured = bool(app.config.get('MAIL_USERNAME'))
-            if not mail_configured:
-                return jsonify({
-                    'message': 'Email service not configured. Use the token below (development mode).',
-                    'dev_token': raw_token,
-                    'dev_mode': True,
-                }), 200
+        reset_html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:30px;">
+            <h2>Reset Your Password</h2>
+            <p>Hi {user.first_name},</p>
+            <p>Click the button below to reset your password:</p>
+            <div style="text-align:center;margin:30px 0;">
+                <a href="{reset_url}"
+                   style="background:#1a5cf5;color:white;padding:14px 36px;
+                          text-decoration:none;border-radius:8px;font-weight:bold;
+                          font-size:16px;display:inline-block;">
+                    Reset Password
+                </a>
+            </div>
+            <p style="color:#888;font-size:13px;">
+                This link expires in 60 minutes.<br>
+                If you didn't request this, ignore this email.
+            </p>
+            <p style="color:#aaa;font-size:12px;margin-top:20px;">
+                Link: {reset_url}
+            </p>
+        </div>
+        """
+        reset_text = f"Reset password: {reset_url}\nExpires in 60 minutes."
 
-        return jsonify(generic), 200
+        email_sent = _send_email(
+            email,
+            f'Reset your {COMPANY_NAME} password',
+            reset_html,
+            reset_text
+        )
+
+        if not email_sent and not app.config.get('MAIL_USERNAME'):
+            return jsonify({
+                'message': 'Email not configured (dev mode). Use the token below.',
+                'dev_token': raw_token,
+                'dev_mode': True,
+            }), 200
+
+        return jsonify(generic_msg), 200
 
     except Exception as exc:
         print(f"[ForgotPwd] {exc}")
@@ -763,50 +766,46 @@ def forgot_password():
             db.session.rollback()
         except Exception:
             pass
-        return jsonify({'error': 'An error occurred. Please try again.'}), 500
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
 
 
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 #  AUTH — RESET PASSWORD
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 
 @app.route('/api/auth/reset-password', methods=['POST'])
 def reset_password():
-    if not DB_AVAILABLE:
+    if not DB_OK:
         return jsonify({'error': 'Database unavailable'}), 503
 
-    data     = request.get_json(silent=True) or {}
-    email    = str(data.get('email', '')).lower().strip()
-    token    = str(data.get('reset_token', ''))
-    new_pw   = str(data.get('new_password', ''))
-    confirm  = str(data.get('confirm_password', ''))
+    data = request.get_json(silent=True) or {}
+    email = str(data.get('email', '')).lower().strip()
+    token = str(data.get('reset_token', ''))
+    new_pw = str(data.get('new_password', ''))
 
     if not all([email, token, new_pw]):
         return jsonify({'error': 'All fields are required'}), 400
     if len(new_pw) < 8:
         return jsonify({'error': 'Password must be at least 8 characters'}), 400
-    if confirm and new_pw != confirm:
-        return jsonify({'error': 'Passwords do not match'}), 400
 
     try:
         user = User.query.filter_by(email=email).first()
         if not user or not user.reset_token:
-            return jsonify({'error': 'Invalid or expired reset link. Please request a new one.'}), 400
-
+            return jsonify({'error': 'Invalid or expired reset link'}), 400
         if user.reset_token_expiry < datetime.utcnow():
-            user.reset_token        = None
+            user.reset_token = None
             user.reset_token_expiry = None
             db.session.commit()
-            return jsonify({'error': 'Reset link has expired. Please request a new one.'}), 400
-
+            return jsonify({'error': 'Reset link has expired. Request a new one.'}), 400
         if not bcrypt.check_password_hash(user.reset_token, token):
-            return jsonify({'error': 'Invalid reset link. Please request a new one.'}), 400
+            return jsonify({'error': 'Invalid reset link. Request a new one.'}), 400
 
-        user.password_hash      = bcrypt.generate_password_hash(new_pw).decode('utf-8')
-        user.reset_token        = None
+        user.password_hash = bcrypt.generate_password_hash(new_pw).decode('utf-8')
+        user.reset_token = None
         user.reset_token_expiry = None
         db.session.commit()
-        print(f"[ResetPwd] Password reset for {email}")
+
+        print(f"[ResetPwd] ✓ Password reset for {email}")
         return jsonify({'message': 'Password reset successfully. You can now sign in.'}), 200
 
     except Exception as exc:
@@ -817,36 +816,36 @@ def reset_password():
         return jsonify({'error': str(exc)}), 500
 
 
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 #  AUTH — PROFILE / CHANGE PASSWORD
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 
 @app.route('/api/auth/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
-    if not DB_AVAILABLE:
+    if not DB_OK:
         return jsonify({'error': 'Database unavailable'}), 503
     user = User.query.get(get_jwt_identity())
-    return (jsonify({'user': user.to_dict()}) if user
-            else (jsonify({'error': 'User not found'}), 404))
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify({'user': user.to_dict()}), 200
 
 
 @app.route('/api/auth/change-password', methods=['POST'])
 @jwt_required()
 def change_password():
-    if not DB_AVAILABLE:
+    if not DB_OK:
         return jsonify({'error': 'Database unavailable'}), 503
     data = request.get_json(silent=True) or {}
     try:
         user = User.query.get(get_jwt_identity())
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        if not bcrypt.check_password_hash(user.password_hash,
-                                          data.get('current_password', '')):
+        if not bcrypt.check_password_hash(user.password_hash, data.get('current_password', '')):
             return jsonify({'error': 'Current password is incorrect'}), 401
         new_pw = data.get('new_password', '')
         if len(new_pw) < 8:
-            return jsonify({'error': 'Min 8 characters required'}), 400
+            return jsonify({'error': 'New password must be at least 8 characters'}), 400
         user.password_hash = bcrypt.generate_password_hash(new_pw).decode('utf-8')
         db.session.commit()
         return jsonify({'message': 'Password changed successfully'}), 200
@@ -858,9 +857,9 @@ def change_password():
         return jsonify({'error': str(exc)}), 500
 
 
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 #  PRODUCTS
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 
 @app.route('/api/products/makes', methods=['GET'])
 @jwt_required()
@@ -868,26 +867,21 @@ def get_makes():
     try:
         data = load_products()
         if data.get('error'):
-            return jsonify({'error': data['error'], 'makes': [],
-                            'total_items': 0, 'total_makes': 0}), 200
-        items  = data['Sheet1']
+            return jsonify({'error': data['error'], 'makes': [], 'total_items': 0, 'total_makes': 0}), 200
+        items = data['Sheet1']
         bucket = {}
         for item in items:
             m = item['Make']
             if m not in bucket:
                 bucket[m] = {'name': m, 'count': 0, 'total_value': 0.0}
             bucket[m]['count'] += 1
-            bucket[m]['total_value'] += (
-                _safe_num(item['Net Price']) * _safe_num(item['Quantity'], 1)
-            )
+            bucket[m]['total_value'] += _safe_num(item['Net Price']) * _safe_num(item['Quantity'], 1)
         for v in bucket.values():
             v['total_value'] = round(v['total_value'], 2)
         makes = sorted(bucket.values(), key=lambda x: x['name'].lower())
-        return jsonify({'makes': makes, 'total_items': len(items),
-                        'total_makes': len(makes)}), 200
-    except Exception as exc:
-        return jsonify({'error': str(exc), 'makes': [],
-                        'total_items': 0, 'total_makes': 0}), 500
+        return jsonify({'makes': makes, 'total_items': len(items), 'total_makes': len(makes)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'makes': [], 'total_items': 0, 'total_makes': 0}), 500
 
 
 @app.route('/api/products/by-make/<path:make_name>', methods=['GET'])
@@ -897,29 +891,26 @@ def get_by_make(make_name):
         data = load_products()
         if data.get('error'):
             return jsonify({'error': data['error'], 'products': [], 'count': 0}), 200
-        filtered = [i for i in data['Sheet1']
-                    if i['Make'].lower() == make_name.strip().lower()]
-        total = sum(_safe_num(i['Net Price']) * _safe_num(i['Quantity'], 1)
-                    for i in filtered)
-        return jsonify({'make': make_name, 'products': filtered,
-                        'count': len(filtered), 'total_value': round(total, 2)}), 200
-    except Exception as exc:
-        return jsonify({'error': str(exc), 'products': [], 'count': 0}), 500
+        filtered = [i for i in data['Sheet1'] if i['Make'].lower() == make_name.strip().lower()]
+        total = sum(_safe_num(i['Net Price']) * _safe_num(i['Quantity'], 1) for i in filtered)
+        return jsonify({'make': make_name, 'products': filtered, 'count': len(filtered), 'total_value': round(total, 2)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'products': [], 'count': 0}), 500
 
 
 @app.route('/api/products/search', methods=['GET'])
 @jwt_required()
 def search_products():
     try:
-        q      = request.args.get('q', '').lower().strip()
-        make_f = request.args.get('make', '').lower().strip()
-        limit  = min(int(request.args.get('limit', 500)), 2000)
-        data   = load_products()
+        q = request.args.get('q', '').lower().strip()
+        mf = request.args.get('make', '').lower().strip()
+        limit = min(int(request.args.get('limit', 500)), 2000)
+        data = load_products()
         if data.get('error'):
             return jsonify({'error': data['error'], 'results': [], 'count': 0}), 200
         results = []
         for item in data['Sheet1']:
-            if make_f and item['Make'].lower() != make_f:
+            if mf and item['Make'].lower() != mf:
                 continue
             if q:
                 blob = ' '.join(str(v or '') for v in item.values()).lower()
@@ -928,10 +919,9 @@ def search_products():
             results.append(item)
             if len(results) >= limit:
                 break
-        return jsonify({'results': results, 'count': len(results),
-                        'query': q, 'truncated': len(results) >= limit}), 200
-    except Exception as exc:
-        return jsonify({'error': str(exc), 'results': [], 'count': 0}), 500
+        return jsonify({'results': results, 'count': len(results), 'query': q, 'truncated': len(results) >= limit}), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'results': [], 'count': 0}), 500
 
 
 @app.route('/api/products/stats', methods=['GET'])
@@ -940,22 +930,19 @@ def get_stats():
     try:
         data = load_products()
         if data.get('error'):
-            return jsonify({'error': data['error'], 'total_items': 0,
-                            'total_makes': 0, 'total_value': 0, 'makes': []}), 200
+            return jsonify({'error': data['error'], 'total_items': 0, 'total_makes': 0, 'total_value': 0, 'makes': []}), 200
         items = data['Sheet1']
         makes = sorted({i['Make'] for i in items})
-        total = sum(_safe_num(i['Net Price']) * _safe_num(i['Quantity'], 1)
-                    for i in items)
-        return jsonify({'total_items': len(items), 'total_makes': len(makes),
-                        'total_value': round(total, 2), 'makes': makes}), 200
-    except Exception as exc:
-        return jsonify({'error': str(exc)}), 500
+        total = sum(_safe_num(i['Net Price']) * _safe_num(i['Quantity'], 1) for i in items)
+        return jsonify({'total_items': len(items), 'total_makes': len(makes), 'total_value': round(total, 2), 'makes': makes}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/products/update', methods=['POST'])
 @jwt_required()
 def update_products():
-    if not DB_AVAILABLE:
+    if not DB_OK:
         return jsonify({'error': 'Database unavailable'}), 503
     user = User.query.get(get_jwt_identity())
     if not user or user.role != 'admin':
@@ -964,33 +951,31 @@ def update_products():
         data = request.get_json(force=True)
         ok, msg = save_products(data)
         return jsonify({'message': msg}) if ok else (jsonify({'error': msg}), 500)
-    except Exception as exc:
-        return jsonify({'error': str(exc)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/cache/clear', methods=['DELETE'])
 @jwt_required()
 def clear_cache():
-    if not DB_AVAILABLE:
+    if not DB_OK:
         return jsonify({'message': 'Cache cleared'}), 200
     try:
         uid = get_jwt_identity()
-        ProductCache.query.filter_by(
-            user_id=uid, is_deleted=False
-        ).update({'is_deleted': True})
+        ProductCache.query.filter_by(user_id=uid, is_deleted=False).update({'is_deleted': True})
         db.session.commit()
         return jsonify({'message': 'Cache cleared'}), 200
-    except Exception as exc:
+    except Exception as e:
         try:
             db.session.rollback()
         except Exception:
             pass
-        return jsonify({'error': str(exc)}), 500
+        return jsonify({'error': str(e)}), 500
 
 
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 #  ERROR HANDLERS
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
 
 @app.errorhandler(400)
 def bad_request(e):
@@ -1003,7 +988,7 @@ def not_found(e):
 
 @app.errorhandler(413)
 def too_large(e):
-    return jsonify({'error': 'File too large (max 50 MB)'}), 413
+    return jsonify({'error': 'File too large'}), 413
 
 @app.errorhandler(500)
 def server_error(e):
@@ -1022,12 +1007,23 @@ def missing(e):
     return jsonify({'error': 'Auth required', 'code': 'MISSING_TOKEN'}), 401
 
 
-# ════════════════════════════════════════════════
-#  ENTRY POINT
-# ════════════════════════════════════════════════
+# ════════════════════════════════════════════════════
+#  RUN
+# ════════════════════════════════════════════════════
 
 if __name__ == '__main__':
-    port  = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV', 'production') == 'development'
-    print(f"[App] Starting on :{port}  debug={debug}")
+
+    # Final status
+    print("\n" + "=" * 50)
+    print(f"  Server starting on port {port}")
+    print(f"  Database: {'✓ OK' if DB_OK else '✗ FAILED'}")
+    print(f"  Frontend: {'✓ Found' if os.path.isdir(FRONTEND_DIR) else '✗ Missing'}")
+    print(f"  Products: {'✓ Found' if os.path.exists(_products_path()) else '✗ Missing'}")
+    if DB_OK:
+        with app.app_context():
+            print(f"  Users:    {User.query.count()}")
+    print("=" * 50 + "\n")
+
     app.run(debug=debug, host='0.0.0.0', port=port)
