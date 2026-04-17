@@ -1470,3 +1470,267 @@ td.td-price {
     display: none;
   }
 }
+/* ═══════════════════════════════════════════════
+   ADD PRODUCT STYLES
+   ═══════════════════════════════════════════════ */
+
+/* Floating Action Button */
+.fab-add-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #1a5cf5 0%, #1448e1 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(26, 92, 245, 0.4),
+                0 2px 6px rgba(26, 92, 245, 0.2);
+    z-index: 90;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.fab-add-btn:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 10px 28px rgba(26, 92, 245, 0.45);
+}
+
+.fab-add-btn:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 639px) {
+    .fab-add-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 52px;
+        height: 52px;
+    }
+}
+
+/* Add Tabs */
+.add-tabs {
+    display: flex;
+    background: var(--slate-100);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    margin-bottom: 20px;
+    gap: 3px;
+}
+
+.add-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition-base);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.add-tab.active {
+    background: var(--white);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-xs);
+}
+
+.add-tab:hover:not(.active) { color: var(--text-primary); }
+
+.add-tab svg { opacity: 0.6; }
+.add-tab.active svg { opacity: 1; color: var(--primary-600); }
+
+/* Add Panels */
+.add-panel { display: none; animation: fadeIn 0.2s ease; }
+.add-panel.active { display: block; }
+
+/* Form Row (2 columns) */
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+@media (max-width: 500px) {
+    .form-row-2 { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* Suggestion Dropdown */
+.input-with-suggest { position: relative; }
+
+.suggest-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 50;
+    display: none;
+    animation: slideDown 0.15s ease;
+}
+
+.suggest-dropdown.open { display: block; }
+
+.suggest-item {
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.suggest-item:last-child { border-bottom: none; }
+.suggest-item:hover { background: var(--primary-50); }
+
+.suggest-item .suggest-count {
+    font-size: 0.6875rem;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    background: var(--slate-100);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+}
+
+/* Preview Card */
+.add-preview {
+    margin-top: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.preview-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 10px 14px;
+    background: var(--slate-50);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.preview-title svg { opacity: 0.5; }
+
+.preview-body {
+    padding: 14px;
+    font-size: 0.8125rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.preview-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.preview-field .pf-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.preview-field .pf-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.preview-field.full { grid-column: 1 / -1; }
+
+/* Bulk JSON textarea */
+.bulk-textarea {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 180px;
+}
+
+/* Form Actions Bottom */
+.form-actions-bottom {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+}
+
+/* ═══════════════════════════════════════════════
+   TABLE ROW ACTIONS
+   ═══════════════════════════════════════════════ */
+
+.row-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.products-table tbody tr:hover .row-actions { opacity: 1; }
+
+.row-action-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-tertiary);
+    transition: var(--transition-base);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.row-action-btn:hover {
+    background: var(--slate-100);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.row-action-btn.danger:hover {
+    background: var(--rose-50);
+    color: var(--rose-600);
+    border-color: var(--rose-200);
+}
+
+.col-actions { width: 80px; text-align: center; }
+
+/* Mobile actions always visible */
+@media (max-width: 639px) {
+    .row-actions { opacity: 1; }
+}

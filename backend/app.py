@@ -972,7 +972,279 @@ def clear_cache():
             pass
         return jsonify({'error': str(e)}), 500
 
+# ════════════════════════════════════════════════════
+#  PRODUCTS — ADD SINGLE PRODUCT
+# ════════════════════════════════════════════════════
 
+@app.route('/api/products/add', methods=['POST'])
+@jwt_required()
+def add_product():
+    """Add a single product to the JSON file permanently."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'No data received'}), 400
+
+    # Validate required fields
+    make = str(data.get('Make', '') or '').strip()
+    model = str(data.get('Model', '') or '').strip()
+
+    if not make:
+        return jsonify({'error': '"Make" (brand name) is required'}), 400
+    if not model:
+        return jsonify({'error': '"Model" is required'}), 400
+
+    # Build clean product entry
+    new_product = {
+        'Sl.No': data.get('Sl.No'),
+        'Make': make,
+        'Model': model,
+        'Description': str(data.get('Description', '') or '').strip() or None,
+        'Quantity': _safe_num(data.get('Quantity'), 1),
+        'Net Price': _safe_num(data.get('Net Price'), 0),
+    }
+
+    try:
+        # Load current data
+        products_data = load_products()
+        if products_data.get('error'):
+            return jsonify({'error': f'Cannot load products file: {products_data["error"]}'}), 500
+
+        items = products_data.get('Sheet1', [])
+
+        # Auto-assign Sl.No if not provided
+        if new_product['Sl.No'] is None:
+            existing_numbers = [
+                i.get('Sl.No') for i in items
+                if i.get('Sl.No') is not None
+            ]
+            max_num = max(existing_numbers) if existing_numbers else 0
+            try:
+                max_num = int(max_num)
+            except (ValueError, TypeError):
+                max_num = len(items)
+            new_product['Sl.No'] = max_num + 1
+
+        # Check for duplicate model in same make
+        duplicate = any(
+            i.get('Make', '').lower() == make.lower() and
+            i.get('Model', '').lower() == model.lower()
+            for i in items
+        )
+        if duplicate:
+            return jsonify({
+                'error': f'Model "{model}" already exists under "{make}". Use a different model name.',
+                'duplicate': True
+            }), 409
+
+        # Add to list
+        items.append(new_product)
+        products_data['Sheet1'] = items
+
+        # Save permanently to JSON file
+        ok, msg = save_products(products_data)
+        if not ok:
+            return jsonify({'error': f'Failed to save: {msg}'}), 500
+
+        print(f"[AddProduct] ✓ Added: {make} / {model} — Total items: {len(items)}")
+
+        return jsonify({
+            'message': f'Product "{model}" added to "{make}" successfully.',
+            'product': new_product,
+            'total_items': len(items),
+        }), 201
+
+    except Exception as exc:
+        print(f"[AddProduct] Error: {exc}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to add product: {str(exc)}'}), 500
+
+
+@app.route('/api/products/add-bulk', methods=['POST'])
+@jwt_required()
+def add_bulk_products():
+    """Add multiple products at once."""
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return jsonify({'error': 'Invalid data format'}), 400
+
+    new_items = data.get('products', [])
+    if not isinstance(new_items, list) or len(new_items) == 0:
+        return jsonify({'error': 'No products provided'}), 400
+
+    try:
+        products_data = load_products()
+        if products_data.get('error'):
+            return jsonify({'error': products_data['error']}), 500
+
+        items = products_data.get('Sheet1', [])
+
+        # Find max Sl.No
+        existing_numbers = [
+            i.get('Sl.No') for i in items
+            if i.get('Sl.No') is not None
+        ]
+        try:
+            next_num = (max(int(n) for n in existing_numbers if n is not None) + 1) if existing_numbers else 1
+        except (ValueError, TypeError):
+            next_num = len(items) + 1
+
+        added = 0
+        skipped = 0
+        errors = []
+
+        for idx, item in enumerate(new_items):
+            make = str(item.get('Make', '') or '').strip()
+            model = str(item.get('Model', '') or '').strip()
+
+            if not make or not model:
+                errors.append(f"Row {idx + 1}: Make and Model are required")
+                skipped += 1
+                continue
+
+            # Check duplicate
+            is_dup = any(
+                i.get('Make', '').lower() == make.lower() and
+                i.get('Model', '').lower() == model.lower()
+                for i in items
+            )
+            if is_dup:
+                errors.append(f"Row {idx + 1}: '{model}' already exists under '{make}'")
+                skipped += 1
+                continue
+
+            clean_item = {
+                'Sl.No': item.get('Sl.No') if item.get('Sl.No') is not None else next_num,
+                'Make': make,
+                'Model': model,
+                'Description': str(item.get('Description', '') or '').strip() or None,
+                'Quantity': _safe_num(item.get('Quantity'), 1),
+                'Net Price': _safe_num(item.get('Net Price'), 0),
+            }
+            items.append(clean_item)
+            next_num += 1
+            added += 1
+
+        products_data['Sheet1'] = items
+        ok, msg = save_products(products_data)
+        if not ok:
+            return jsonify({'error': f'Failed to save: {msg}'}), 500
+
+        print(f"[BulkAdd] ✓ Added {added}, Skipped {skipped}, Total: {len(items)}")
+
+        return jsonify({
+            'message': f'Added {added} product(s). Skipped {skipped}.',
+            'added': added,
+            'skipped': skipped,
+            'errors': errors[:10],
+            'total_items': len(items),
+        }), 201
+
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
+@app.route('/api/products/delete', methods=['POST'])
+@jwt_required()
+def delete_product():
+    """Delete a product by Make + Model."""
+    data = request.get_json(silent=True) or {}
+    make = str(data.get('Make', '')).strip()
+    model = str(data.get('Model', '')).strip()
+
+    if not make or not model:
+        return jsonify({'error': 'Make and Model are required to delete'}), 400
+
+    try:
+        products_data = load_products()
+        if products_data.get('error'):
+            return jsonify({'error': products_data['error']}), 500
+
+        items = products_data.get('Sheet1', [])
+        original_count = len(items)
+
+        items = [
+            i for i in items
+            if not (i.get('Make', '').lower() == make.lower() and
+                    i.get('Model', '').lower() == model.lower())
+        ]
+
+        removed = original_count - len(items)
+        if removed == 0:
+            return jsonify({'error': f'Product "{model}" under "{make}" not found'}), 404
+
+        products_data['Sheet1'] = items
+        ok, msg = save_products(products_data)
+        if not ok:
+            return jsonify({'error': f'Failed to save: {msg}'}), 500
+
+        print(f"[Delete] ✓ Removed {removed} item(s): {make}/{model}")
+        return jsonify({
+            'message': f'Deleted "{model}" from "{make}".',
+            'removed': removed,
+            'total_items': len(items),
+        }), 200
+
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
+@app.route('/api/products/edit', methods=['POST'])
+@jwt_required()
+def edit_product():
+    """Edit an existing product identified by original Make + Model."""
+    data = request.get_json(silent=True) or {}
+    orig_make = str(data.get('original_make', '')).strip()
+    orig_model = str(data.get('original_model', '')).strip()
+
+    if not orig_make or not orig_model:
+        return jsonify({'error': 'Original Make and Model required'}), 400
+
+    new_make = str(data.get('Make', orig_make)).strip()
+    new_model = str(data.get('Model', orig_model)).strip()
+
+    if not new_make or not new_model:
+        return jsonify({'error': 'Make and Model cannot be empty'}), 400
+
+    try:
+        products_data = load_products()
+        if products_data.get('error'):
+            return jsonify({'error': products_data['error']}), 500
+
+        items = products_data.get('Sheet1', [])
+        found = False
+
+        for i, item in enumerate(items):
+            if (item.get('Make', '').lower() == orig_make.lower() and
+                item.get('Model', '').lower() == orig_model.lower()):
+                items[i] = {
+                    'Sl.No': data.get('Sl.No', item.get('Sl.No')),
+                    'Make': new_make,
+                    'Model': new_model,
+                    'Description': str(data.get('Description', item.get('Description', '')) or '').strip() or None,
+                    'Quantity': _safe_num(data.get('Quantity', item.get('Quantity')), 1),
+                    'Net Price': _safe_num(data.get('Net Price', item.get('Net Price')), 0),
+                }
+                found = True
+                break
+
+        if not found:
+            return jsonify({'error': f'Product "{orig_model}" under "{orig_make}" not found'}), 404
+
+        products_data['Sheet1'] = items
+        ok, msg = save_products(products_data)
+        if not ok:
+            return jsonify({'error': f'Failed to save: {msg}'}), 500
+
+        print(f"[Edit] ✓ Updated: {orig_make}/{orig_model} → {new_make}/{new_model}")
+        return jsonify({
+            'message': f'Product updated successfully.',
+            'product': items[i] if found else None,
+        }), 200
+
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+    
 # ════════════════════════════════════════════════════
 #  ERROR HANDLERS
 # ════════════════════════════════════════════════════

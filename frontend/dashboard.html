@@ -421,6 +421,7 @@
                                         <path d="m7 9 5-5 5 5"/>
                                     </svg>
                                 </th>
+                                <th class="col-actions"><span>Actions</span></th>
                             </tr>
                         </thead>
                         <tbody id="tableBody"></tbody>
@@ -465,7 +466,258 @@
             </div>
         </div>
     </div>
+    <!-- ══════════ ADD PRODUCT BUTTON (Floating) ══════════ -->
+    <button class="fab-add-btn" id="fabAddBtn" onclick="openAddProductModal()" title="Add Product">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+    </button>
 
+    <!-- ══════════ ADD PRODUCT MODAL ══════════ -->
+    <div class="modal-overlay" id="addProductModal">
+        <div class="modal-container wide">
+            <div class="modal-header" style="background:linear-gradient(135deg,#0f2027,#2c5364);">
+                <h3 style="color:white;display:flex;align-items:center;gap:10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="white" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add New Product
+                </h3>
+                <button class="modal-close-btn"
+                        style="background:rgba(255,255,255,0.15);color:white;"
+                        onclick="closeAddProductModal()">✕</button>
+            </div>
+
+            <div class="modal-body" id="addProductBody">
+                <!-- Tab: Single / Bulk -->
+                <div class="add-tabs">
+                    <button class="add-tab active" data-addtab="single"
+                            onclick="switchAddTab('single')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2">
+                            <path d="m7.5 4.27 9 5.15"/>
+                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4
+                                     A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0
+                                     l7-4A2 2 0 0 0 21 16Z"/>
+                        </svg>
+                        Single Product
+                    </button>
+                    <button class="add-tab" data-addtab="bulk"
+                            onclick="switchAddTab('bulk')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12
+                                     a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        Bulk / Paste JSON
+                    </button>
+                </div>
+
+                <div id="addAlertContainer" class="auth-alert-container"></div>
+
+                <!-- ── Single Product Form ── -->
+                <div id="addSinglePanel" class="add-panel active">
+                    <form id="addProductForm" onsubmit="handleAddProduct(event)" novalidate>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Make / Brand <span style="color:var(--rose-500)">*</span>
+                                </label>
+                                <div class="input-with-suggest">
+                                    <input type="text" class="form-input" id="addMake"
+                                           placeholder="e.g. Edwards, Bosch, Honeywell..."
+                                           required autocomplete="off"
+                                           oninput="showMakeSuggestions(this.value)"
+                                           onfocus="showMakeSuggestions(this.value)">
+                                    <div class="suggest-dropdown" id="makeSuggestDropdown"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Sl. No <span style="color:var(--text-tertiary)">(auto)</span>
+                                </label>
+                                <input type="number" class="form-input" id="addSlNo"
+                                       placeholder="Auto-assigned if empty">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Model <span style="color:var(--rose-500)">*</span>
+                            </label>
+                            <input type="text" class="form-input" id="addModel"
+                                   placeholder="e.g. SIGA-OSD+ SIGA-SB"
+                                   required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <input type="text" class="form-input" id="addDescription"
+                                   placeholder="e.g. Smoke detector, Manual Call Point...">
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-input" id="addQuantity"
+                                       placeholder="1" min="1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Net Price (₹)</label>
+                                <input type="number" class="form-input" id="addNetPrice"
+                                       placeholder="0.00" min="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <!-- Preview Card -->
+                        <div class="add-preview" id="addPreview" style="display:none;">
+                            <div class="preview-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                Preview
+                            </div>
+                            <div class="preview-body" id="previewBody"></div>
+                        </div>
+
+                        <div class="form-actions-bottom">
+                            <button type="button" class="btn btn-secondary"
+                                    onclick="resetAddForm()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2">
+                                    <path d="M21.5 2v6h-6M2.5 22v-6h6
+                                             M2 11.5a10 10 0 0 1 18.8-4.3
+                                             M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                                </svg>
+                                Reset
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="addProductBtn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2.5">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                                Add Product
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ── Bulk JSON Panel ── -->
+                <div id="addBulkPanel" class="add-panel">
+                    <p style="font-size:0.8125rem;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">
+                        Paste a JSON array of products. Each object must have at least
+                        <code style="background:var(--slate-100);padding:2px 6px;border-radius:4px;font-size:0.75rem;">"Make"</code> and
+                        <code style="background:var(--slate-100);padding:2px 6px;border-radius:4px;font-size:0.75rem;">"Model"</code>.
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label">JSON Array</label>
+                        <textarea class="form-input bulk-textarea" id="bulkJsonInput"
+                                  rows="10"
+                                  placeholder='[
+  {"Make": "Edwards", "Model": "SIGA-270", "Description": "Manual Call Point", "Quantity": 1, "Net Price": 2005},
+  {"Make": "Bosch", "Model": "PRA-SCS", "Description": "System controller", "Quantity": 1, "Net Price": 157530}
+]'></textarea>
+                    </div>
+                    <div class="form-actions-bottom">
+                        <button type="button" class="btn btn-secondary"
+                                onclick="validateBulkJson()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Validate
+                        </button>
+                        <button type="button" class="btn btn-primary" id="bulkAddBtn"
+                                onclick="handleBulkAdd()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add All Products
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════ EDIT PRODUCT MODAL ══════════ -->
+    <div class="modal-overlay" id="editProductModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 style="display:flex;align-items:center;gap:8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14
+                                 a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Edit Product
+                </h3>
+                <button class="modal-close-btn" onclick="closeEditModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="editAlertContainer" class="auth-alert-container"></div>
+                <form id="editProductForm" onsubmit="handleEditProduct(event)" novalidate>
+                    <input type="hidden" id="editOrigMake">
+                    <input type="hidden" id="editOrigModel">
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label class="form-label">Make *</label>
+                            <input type="text" class="form-input" id="editMake" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sl. No</label>
+                            <input type="number" class="form-input" id="editSlNo">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Model *</label>
+                        <input type="text" class="form-input" id="editModel" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-input" id="editDescription">
+                    </div>
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" class="form-input" id="editQuantity" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Net Price (₹)</label>
+                            <input type="number" class="form-input" id="editNetPrice"
+                                   min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-actions-bottom">
+                        <button type="button" class="btn btn-danger" onclick="handleDeleteFromEdit()"
+                                id="editDeleteBtn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            </svg>
+                            Delete
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="editSaveBtn">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <!-- Product Detail Modal -->
     <div class="modal-overlay" id="productModal">
         <div class="modal-container wide">

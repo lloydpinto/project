@@ -924,3 +924,516 @@ function showToast(title, message, type) {
 function showModalAlert(cid, msg, type) {
     el(cid).innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${type==='error'?'⚠':'✓'}</span><span class="alert-content">${escapeHtml(msg)}</span></div>`;
 }
+
+// ════════════════════════════════════════════════════
+//  ADD PRODUCT
+// ════════════════════════════════════════════════════
+
+function openAddProductModal() {
+    el('addProductModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    el('addAlertContainer').innerHTML = '';
+
+    // Pre-fill Make if one is selected
+    if (state.currentMake) {
+        el('addMake').value = state.currentMake;
+    }
+
+    // Live preview
+    ['addMake', 'addModel', 'addDescription', 'addQuantity', 'addNetPrice'].forEach(id => {
+        const inp = el(id);
+        if (inp) inp.addEventListener('input', updateAddPreview);
+    });
+}
+
+function closeAddProductModal() {
+    el('addProductModal').classList.remove('active');
+    document.body.style.overflow = '';
+    _closeSuggestions();
+}
+
+function switchAddTab(tab) {
+    document.querySelectorAll('.add-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`[data-addtab="${tab}"]`).classList.add('active');
+    el('addSinglePanel').classList.toggle('active', tab === 'single');
+    el('addBulkPanel').classList.toggle('active', tab === 'bulk');
+    el('addAlertContainer').innerHTML = '';
+}
+
+function resetAddForm() {
+    el('addProductForm').reset();
+    el('addPreview').style.display = 'none';
+    el('addAlertContainer').innerHTML = '';
+    if (state.currentMake) el('addMake').value = state.currentMake;
+}
+
+function updateAddPreview() {
+    const make = el('addMake').value.trim();
+    const model = el('addModel').value.trim();
+
+    if (!make && !model) {
+        el('addPreview').style.display = 'none';
+        return;
+    }
+
+    const desc  = el('addDescription').value.trim();
+    const qty   = el('addQuantity').value || '1';
+    const price = el('addNetPrice').value || '0';
+
+    el('addPreview').style.display = 'block';
+    el('previewBody').innerHTML = `
+        <div class="preview-field">
+            <span class="pf-label">Make</span>
+            <span class="pf-value">${escapeHtml(make || '—')}</span>
+        </div>
+        <div class="preview-field">
+            <span class="pf-label">Model</span>
+            <span class="pf-value">${escapeHtml(model || '—')}</span>
+        </div>
+        <div class="preview-field full">
+            <span class="pf-label">Description</span>
+            <span class="pf-value">${desc ? escapeHtml(desc) : '<em style="color:var(--text-tertiary)">None</em>'}</span>
+        </div>
+        <div class="preview-field">
+            <span class="pf-label">Quantity</span>
+            <span class="pf-value">${escapeHtml(qty)}</span>
+        </div>
+        <div class="preview-field">
+            <span class="pf-label">Net Price</span>
+            <span class="pf-value" style="font-family:'JetBrains Mono',monospace;">
+                ₹ ${formatNumber(parseFloat(price) || 0)}
+            </span>
+        </div>
+    `;
+}
+
+// ── Make Suggestions ──
+function showMakeSuggestions(query) {
+    const dropdown = el('makeSuggestDropdown');
+    if (!dropdown) return;
+
+    if (!query.trim() || !state.allMakes || state.allMakes.length === 0) {
+        // Show all makes
+        if (state.allMakes && state.allMakes.length > 0) {
+            dropdown.innerHTML = state.allMakes.map(m =>
+                `<div class="suggest-item" onclick="selectMakeSuggestion('${escapeHtml(m.name)}')">
+                    <span>${escapeHtml(m.name)}</span>
+                    <span class="suggest-count">${m.count} models</span>
+                </div>`
+            ).join('');
+            dropdown.classList.add('open');
+        }
+        return;
+    }
+
+    const q = query.toLowerCase();
+    const matches = (state.allMakes || []).filter(m =>
+        m.name.toLowerCase().includes(q)
+    );
+
+    if (matches.length === 0) {
+        dropdown.innerHTML = `
+            <div class="suggest-item" onclick="selectMakeSuggestion('${escapeHtml(query.trim())}')">
+                <span>+ Create "<strong>${escapeHtml(query.trim())}</strong>"</span>
+                <span class="suggest-count">New</span>
+            </div>`;
+    } else {
+        dropdown.innerHTML = matches.map(m =>
+            `<div class="suggest-item" onclick="selectMakeSuggestion('${escapeHtml(m.name)}')">
+                <span>${escapeHtml(m.name)}</span>
+                <span class="suggest-count">${m.count} models</span>
+            </div>`
+        ).join('');
+    }
+    dropdown.classList.add('open');
+}
+
+function selectMakeSuggestion(name) {
+    el('addMake').value = name;
+    _closeSuggestions();
+    updateAddPreview();
+    el('addModel').focus();
+}
+
+function _closeSuggestions() {
+    const dd = el('makeSuggestDropdown');
+    if (dd) dd.classList.remove('open');
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', e => {
+    if (!e.target.closest('.input-with-suggest')) {
+        _closeSuggestions();
+    }
+});
+
+// ── Submit Single Product ──
+async function handleAddProduct(event) {
+    event.preventDefault();
+
+    const make  = el('addMake').value.trim();
+    const model = el('addModel').value.trim();
+
+    if (!make) { _addAlert('Make / Brand is required.', 'error'); return; }
+    if (!model) { _addAlert('Model is required.', 'error'); return; }
+
+    const slNoVal   = el('addSlNo').value.trim();
+    const desc      = el('addDescription').value.trim();
+    const qty       = parseFloat(el('addQuantity').value) || 1;
+    const price     = parseFloat(el('addNetPrice').value) || 0;
+
+    const product = {
+        'Sl.No': slNoVal ? parseInt(slNoVal) : null,
+        'Make': make,
+        'Model': model,
+        'Description': desc || null,
+        'Quantity': qty,
+        'Net Price': price,
+    };
+
+    const btn = el('addProductBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner"></span> Adding...';
+
+    try {
+        const res = await apiCall('/products/add', {
+            method: 'POST',
+            body: JSON.stringify(product),
+        });
+
+        showToast('Product Added!', res.message || `${model} added to ${make}.`, 'success');
+        _addAlert(res.message || 'Product added successfully!', 'success');
+
+        // Clear cache so data reloads fresh
+        state.cache.delete(make);
+
+        // If currently viewing this make, refresh
+        if (state.currentMake && state.currentMake.toLowerCase() === make.toLowerCase()) {
+            await handleMakeChange(state.currentMake);
+        }
+
+        // Refresh stats
+        await _refreshStats();
+
+        // Reset form but keep Make
+        el('addModel').value = '';
+        el('addDescription').value = '';
+        el('addSlNo').value = '';
+        el('addQuantity').value = '1';
+        el('addNetPrice').value = '';
+        el('addPreview').style.display = 'none';
+        el('addModel').focus();
+
+    } catch (e) {
+        _addAlert(e.message || 'Failed to add product.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Product`;
+    }
+}
+
+// ── Bulk Add ──
+function validateBulkJson() {
+    const raw = el('bulkJsonInput').value.trim();
+    if (!raw) { _addAlert('Paste a JSON array first.', 'warning'); return false; }
+    try {
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) {
+            _addAlert('JSON must be an array [ ... ]', 'error'); return false;
+        }
+        if (arr.length === 0) {
+            _addAlert('Array is empty.', 'warning'); return false;
+        }
+        let valid = 0, invalid = 0;
+        arr.forEach((item, i) => {
+            if (item.Make && item.Model) valid++;
+            else invalid++;
+        });
+        _addAlert(`Valid: ${valid} products. Invalid: ${invalid}. Total: ${arr.length}.`,
+                   invalid > 0 ? 'warning' : 'success');
+        return true;
+    } catch (e) {
+        _addAlert(`JSON parse error: ${e.message}`, 'error');
+        return false;
+    }
+}
+
+async function handleBulkAdd() {
+    const raw = el('bulkJsonInput').value.trim();
+    if (!raw) { _addAlert('Paste a JSON array first.', 'warning'); return; }
+
+    let arr;
+    try {
+        arr = JSON.parse(raw);
+        if (!Array.isArray(arr) || arr.length === 0) {
+            _addAlert('JSON must be a non-empty array.', 'error'); return;
+        }
+    } catch (e) {
+        _addAlert(`JSON error: ${e.message}`, 'error'); return;
+    }
+
+    const btn = el('bulkAddBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner"></span> Adding...';
+
+    try {
+        const res = await apiCall('/products/add-bulk', {
+            method: 'POST',
+            body: JSON.stringify({ products: arr }),
+        });
+
+        const msg = res.message || `Added ${res.added} products.`;
+        showToast('Bulk Add Done', msg, res.skipped > 0 ? 'warning' : 'success');
+        _addAlert(msg, res.skipped > 0 ? 'warning' : 'success');
+
+        if (res.errors && res.errors.length > 0) {
+            _addAlert(msg + '<br>' + res.errors.join('<br>'), 'warning');
+        }
+
+        // Clear caches
+        state.cache.clear();
+        if (state.currentMake) await handleMakeChange(state.currentMake);
+        await _refreshStats();
+        await loadAllData();
+
+        el('bulkJsonInput').value = '';
+
+    } catch (e) {
+        _addAlert(e.message || 'Bulk add failed.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add All Products`;
+    }
+}
+
+function _addAlert(msg, type) {
+    const c = el('addAlertContainer');
+    if (!c) return;
+    const icons = { error: '⚠', success: '✓', info: 'ℹ', warning: '⚠' };
+    c.innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${icons[type] || 'ℹ'}</span><span class="alert-content">${msg}</span></div>`;
+}
+
+// ════════════════════════════════════════════════════
+//  EDIT / DELETE PRODUCT
+// ════════════════════════════════════════════════════
+
+function openEditModal(product) {
+    el('editOrigMake').value = product['Make'] || '';
+    el('editOrigModel').value = product['Model'] || '';
+    el('editMake').value = product['Make'] || '';
+    el('editModel').value = product['Model'] || '';
+    el('editSlNo').value = product['Sl.No'] ?? '';
+    el('editDescription').value = product['Description'] || '';
+    el('editQuantity').value = product['Quantity'] ?? 1;
+    el('editNetPrice').value = product['Net Price'] ?? 0;
+    el('editAlertContainer').innerHTML = '';
+
+    el('editProductModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+    el('editProductModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+async function handleEditProduct(event) {
+    event.preventDefault();
+    const origMake  = el('editOrigMake').value;
+    const origModel = el('editOrigModel').value;
+
+    const updated = {
+        original_make: origMake,
+        original_model: origModel,
+        'Sl.No': el('editSlNo').value ? parseInt(el('editSlNo').value) : null,
+        'Make': el('editMake').value.trim(),
+        'Model': el('editModel').value.trim(),
+        'Description': el('editDescription').value.trim() || null,
+        'Quantity': parseFloat(el('editQuantity').value) || 1,
+        'Net Price': parseFloat(el('editNetPrice').value) || 0,
+    };
+
+    if (!updated.Make || !updated.Model) {
+        _editAlert('Make and Model are required.', 'error'); return;
+    }
+
+    const btn = el('editSaveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+        const res = await apiCall('/products/edit', {
+            method: 'POST',
+            body: JSON.stringify(updated),
+        });
+        showToast('Updated', res.message || 'Product updated.', 'success');
+        closeEditModal();
+        state.cache.clear();
+        if (state.currentMake) await handleMakeChange(state.currentMake);
+        await _refreshStats();
+    } catch (e) {
+        _editAlert(e.message || 'Update failed.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+    }
+}
+
+async function handleDeleteFromEdit() {
+    const make  = el('editOrigMake').value;
+    const model = el('editOrigModel').value;
+
+    if (!confirm(`Are you sure you want to permanently delete "${model}" from "${make}"?`)) return;
+
+    const btn = el('editDeleteBtn');
+    btn.disabled = true;
+
+    try {
+        const res = await apiCall('/products/delete', {
+            method: 'POST',
+            body: JSON.stringify({ Make: make, Model: model }),
+        });
+        showToast('Deleted', res.message || 'Product deleted.', 'info');
+        closeEditModal();
+        state.cache.clear();
+        if (state.currentMake) await handleMakeChange(state.currentMake);
+        await _refreshStats();
+    } catch (e) {
+        _editAlert(e.message || 'Delete failed.', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function _editAlert(msg, type) {
+    const c = el('editAlertContainer');
+    if (!c) return;
+    const icons = { error: '⚠', success: '✓', info: 'ℹ', warning: '⚠' };
+    c.innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${icons[type] || 'ℹ'}</span><span class="alert-content">${msg}</span></div>`;
+}
+
+async function _refreshStats() {
+    try {
+        const [statsData, makesData] = await Promise.all([
+            apiCall('/products/stats'),
+            apiCall('/products/makes'),
+        ]);
+        state.allMakes = makesData.makes || [];
+        animateCounter('statMakes', state.allMakes.length);
+        animateCounter('statProducts', statsData.total_items || 0);
+        populateMakeDropdown(state.allMakes);
+    } catch (e) {
+        console.warn('Stats refresh failed:', e);
+    }
+}
+
+// ── Add Edit/Delete buttons to table rows ──
+// Override the existing renderTable function's row HTML to include action buttons
+// Find the line in renderTable that creates tr.innerHTML and add an actions column
+
+// REPLACE the existing renderTable function with this:
+const _originalRenderTable = renderTable;
+renderTable = function(products) {
+    const tbody = el('tableBody');
+    const tfoot = el('tableFoot');
+
+    if (!products || !products.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="table-no-data"><div class="no-data-inner"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>No records found</span></div></td></tr>`;
+        tfoot.innerHTML = '';
+        return;
+    }
+
+    const frag = document.createDocumentFragment();
+    products.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.dataset.idx = idx;
+        const slNo = (p['Sl.No'] !== null && p['Sl.No'] !== undefined) ? p['Sl.No'] : '—';
+        tr.innerHTML = `
+            <td class="td-slno">${escapeHtml(String(slNo))}</td>
+            <td class="td-make"><span class="make-chip">${escapeHtml(p['Make'] || '—')}</span></td>
+            <td class="td-model">${escapeHtml(p['Model'] || '—')}</td>
+            <td class="td-desc">${p['Description'] ? escapeHtml(p['Description']) : '<span class="null-badge">—</span>'}</td>
+            <td class="td-qty">${escapeHtml(String(p['Quantity'] ?? 1))}</td>
+            <td class="td-price">
+                <div class="price-display">
+                    <span class="price-currency">₹</span>
+                    <span>${formatNumber(p['Net Price'])}</span>
+                </div>
+            </td>
+            <td class="col-actions">
+                <div class="row-actions">
+                    <button class="row-action-btn" onclick="event.stopPropagation(); openProductModal(${idx})" title="View">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button class="row-action-btn" onclick="event.stopPropagation(); openEditModalByIdx(${idx})" title="Edit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="row-action-btn danger" onclick="event.stopPropagation(); quickDelete(${idx})" title="Delete">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </td>
+        `;
+        tr.onclick = () => openProductModal(idx);
+        frag.appendChild(tr);
+    });
+
+    tbody.innerHTML = '';
+    tbody.appendChild(frag);
+
+    const totalQty = products.reduce((s, p) => s + _safeNum(p['Quantity'], 1), 0);
+    const totalVal = products.reduce((s, p) => s + (_safeNum(p['Net Price'], 0) * _safeNum(p['Quantity'], 1)), 0);
+    tfoot.innerHTML = `
+        <tr>
+            <td colspan="5" class="total-label">Total · ${products.length} records</td>
+            <td class="total-value">₹ ${formatNumber(totalVal)}</td>
+            <td></td>
+        </tr>`;
+};
+
+function openEditModalByIdx(idx) {
+    const p = state.filteredProducts[idx];
+    if (p) openEditModal(p);
+}
+
+async function quickDelete(idx) {
+    const p = state.filteredProducts[idx];
+    if (!p) return;
+    if (!confirm(`Delete "${p['Model']}" from "${p['Make']}"?\n\nThis action cannot be undone.`)) return;
+
+    try {
+        const res = await apiCall('/products/delete', {
+            method: 'POST',
+            body: JSON.stringify({ Make: p['Make'], Model: p['Model'] }),
+        });
+        showToast('Deleted', res.message || 'Product removed.', 'info');
+        state.cache.clear();
+        if (state.currentMake) await handleMakeChange(state.currentMake);
+        await _refreshStats();
+    } catch (e) {
+        showToast('Error', e.message || 'Delete failed.', 'error');
+    }
+}
+
+// ── Add Actions column header to table ──
+// Run once on page load to add the header
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        const headerRow = document.querySelector('.products-table thead tr');
+        if (headerRow && !headerRow.querySelector('.col-actions')) {
+            const th = document.createElement('th');
+            th.className = 'col-actions';
+            th.innerHTML = '<span>Actions</span>';
+            headerRow.appendChild(th);
+        }
+    }, 500);
+});
+
+// ── Add keyboard shortcut for Add Product ──
+document.addEventListener('keydown', e => {
+    // Ctrl+Shift+A to open Add Product
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        openAddProductModal();
+    }
+});
